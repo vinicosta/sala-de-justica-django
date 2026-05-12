@@ -1,0 +1,324 @@
+{% extends "unfold/layouts/base_simple.html" %}
+{% block title %}Sala de Justiça / App{% endblock %}
+{% block branding %}{% include "unfold/helpers/site_branding.html" %}{% endblock %}
+{% load i18n %}
+
+{% block content %}
+
+{# ============================================================ #}
+{# Cards principais — acervo por tipo #}
+{# ============================================================ #}
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px;">
+    <div style="border-radius:12px;padding:1rem 1.25rem;background:#1D9E75;">
+        <p style="font-size:12px;color:#9FE1CB;margin:0 0 4px;">Quadrinhos na coleção</p>
+        <p style="font-size:28px;font-weight:500;color:#E1F5EE;margin:0;">{{ acervo_quadrinhos }}</p>
+        <span
+            style="font-size:11px;background:#0F6E56;color:#9FE1CB;padding:2px 8px;border-radius:6px;display:inline-block;margin-top:8px;">Quadrinhos</span>
+    </div>
+    <div style="border-radius:12px;padding:1rem 1.25rem;background:#378ADD;">
+        <p style="font-size:12px;color:#B5D4F4;margin:0 0 4px;">Livros na coleção</p>
+        <p style="font-size:28px;font-weight:500;color:#E6F1FB;margin:0;">{{ acervo_livros }}</p>
+        <span
+            style="font-size:11px;background:#185FA5;color:#B5D4F4;padding:2px 8px;border-radius:6px;display:inline-block;margin-top:8px;">Livros</span>
+    </div>
+    <div style="border-radius:12px;padding:1rem 1.25rem;background:#D85A30;">
+        <p style="font-size:12px;color:#F5C4B3;margin:0 0 4px;">Revistas na coleção</p>
+        <p style="font-size:28px;font-weight:500;color:#FAECE7;margin:0;">{{ acervo_revistas }}</p>
+        <span
+            style="font-size:11px;background:#993C1D;color:#F5C4B3;padding:2px 8px;border-radius:6px;display:inline-block;margin-top:8px;">Revistas</span>
+    </div>
+</div>
+
+{# ============================================================ #}
+{# Cards secundários #}
+{# ============================================================ #}
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;">
+    {% for label, value in cards_secundarios %}
+    <div
+        style="background:var(--un-bg-container);border:0.5px solid var(--un-border-color);border-radius:10px;padding:1rem 1.25rem;">
+        <p style="font-size:12px;color:var(--un-text-muted);margin:0 0 4px;">{{ label }}</p>
+        <p style="font-size:20px;font-weight:500;color:var(--un-text-primary);margin:0;">{{ value }}</p>
+    </div>
+    {% endfor %}
+</div>
+
+{# ============================================================ #}
+{# Páginas lidas — por dia e por mês #}
+{# ============================================================ #}
+<p
+    style="font-size:11px;font-weight:500;color:var(--un-text-muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;">
+    Páginas lidas</p>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:20px;">
+
+    <div
+        style="background:var(--un-bg-container);border:0.5px solid var(--un-border-color);border-radius:12px;padding:1rem 1.25rem;">
+        <p
+            style="font-size:11px;font-weight:500;color:var(--un-text-muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;">
+            Últimos 14 dias</p>
+        <div style="position:relative;width:100%;height:180px;">
+            <canvas id="cPagDia" role="img" aria-label="Páginas lidas por dia nos últimos 14 dias"
+                data-labels="{{ chart_pag_dia_labels|join:',' }}"
+                data-values="{{ chart_pag_dia_data|join:',' }}">Páginas lidas por dia.</canvas>
+        </div>
+    </div>
+
+    <div
+        style="background:var(--un-bg-container);border:0.5px solid var(--un-border-color);border-radius:12px;padding:1rem 1.25rem;">
+        <p
+            style="font-size:11px;font-weight:500;color:var(--un-text-muted);text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;">
+            Últimos 12 meses</p>
+        <div style="position:relative;width:100%;height:180px;">
+            <canvas id="cPagMes" role="img" aria-label="Páginas lidas por mês nos últimos 12 meses"
+                data-labels="{{ chart_pag_mes_labels|join:',' }}"
+                data-values="{{ chart_pag_mes_data|join:',' }}">Páginas lidas por mês.</canvas>
+        </div>
+    </div>
+
+</div>
+
+{# ============================================================ #}
+{# Edições — últimos 7 dias #}
+{# ============================================================ #}
+<p
+    style="font-size:11px;font-weight:500;color:var(--un-text-muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;">
+    Edições lidas — últimos 7 dias</p>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:20px;">
+
+    <div
+        style="background:var(--un-bg-container);border:0.5px solid var(--un-border-color);border-radius:12px;padding:1rem 1.25rem;">
+        <p
+            style="font-size:11px;font-weight:500;color:#1D9E75;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;">
+            Quadrinhos</p>
+        <div style="position:relative;width:100%;height:160px;">
+            <canvas id="c7dQ" role="img" aria-label="Quadrinhos lidos nos últimos 7 dias"
+                data-labels="{{ chart_7d_q_labels|join:',' }}" data-values="{{ chart_7d_q_data|join:',' }}">Quadrinhos
+                lidos por dia.</canvas>
+        </div>
+    </div>
+
+    <div
+        style="background:var(--un-bg-container);border:0.5px solid var(--un-border-color);border-radius:12px;padding:1rem 1.25rem;">
+        <p
+            style="font-size:11px;font-weight:500;color:#378ADD;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;">
+            Livros</p>
+        <div style="position:relative;width:100%;height:160px;">
+            <canvas id="c7dL" role="img" aria-label="Livros lidos nos últimos 7 dias"
+                data-labels="{{ chart_7d_l_labels|join:',' }}" data-values="{{ chart_7d_l_data|join:',' }}">Livros lidos
+                por dia.</canvas>
+        </div>
+    </div>
+
+</div>
+
+{# ============================================================ #}
+{# Edições — mês corrente #}
+{# ============================================================ #}
+<p
+    style="font-size:11px;font-weight:500;color:var(--un-text-muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;">
+    Edições lidas — mês corrente</p>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:20px;">
+
+    <div
+        style="background:var(--un-bg-container);border:0.5px solid var(--un-border-color);border-radius:12px;padding:1rem 1.25rem;">
+        <p
+            style="font-size:11px;font-weight:500;color:#1D9E75;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;">
+            Quadrinhos</p>
+        <div style="position:relative;width:100%;height:160px;">
+            <canvas id="cMcQ" role="img" aria-label="Quadrinhos lidos no mês corrente"
+                data-labels="{{ chart_mc_q_labels|join:',' }}" data-values="{{ chart_mc_q_data|join:',' }}">Quadrinhos
+                lidos no mês.</canvas>
+        </div>
+    </div>
+
+    <div
+        style="background:var(--un-bg-container);border:0.5px solid var(--un-border-color);border-radius:12px;padding:1rem 1.25rem;">
+        <p
+            style="font-size:11px;font-weight:500;color:#378ADD;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;">
+            Livros</p>
+        <div style="position:relative;width:100%;height:160px;">
+            <canvas id="cMcL" role="img" aria-label="Livros lidos no mês corrente"
+                data-labels="{{ chart_mc_l_labels|join:',' }}" data-values="{{ chart_mc_l_data|join:',' }}">Livros lidos
+                no mês.</canvas>
+        </div>
+    </div>
+
+</div>
+
+{# ============================================================ #}
+{# Edições — ano corrente #}
+{# ============================================================ #}
+<p
+    style="font-size:11px;font-weight:500;color:var(--un-text-muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;">
+    Edições lidas — ano corrente</p>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:20px;">
+
+    <div
+        style="background:var(--un-bg-container);border:0.5px solid var(--un-border-color);border-radius:12px;padding:1rem 1.25rem;">
+        <p
+            style="font-size:11px;font-weight:500;color:#1D9E75;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;">
+            Quadrinhos</p>
+        <div style="position:relative;width:100%;height:160px;">
+            <canvas id="cAcQ" role="img" aria-label="Quadrinhos lidos no ano corrente"
+                data-labels="{{ chart_ac_q_labels|join:',' }}" data-values="{{ chart_ac_q_data|join:',' }}">Quadrinhos
+                lidos por mês no ano.</canvas>
+        </div>
+    </div>
+
+    <div
+        style="background:var(--un-bg-container);border:0.5px solid var(--un-border-color);border-radius:12px;padding:1rem 1.25rem;">
+        <p
+            style="font-size:11px;font-weight:500;color:#378ADD;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px;">
+            Livros</p>
+        <div style="position:relative;width:100%;height:160px;">
+            <canvas id="cAcL" role="img" aria-label="Livros lidos no ano corrente"
+                data-labels="{{ chart_ac_l_labels|join:',' }}" data-values="{{ chart_ac_l_data|join:',' }}">Livros lidos
+                por mês no ano.</canvas>
+        </div>
+    </div>
+
+</div>
+
+{# ============================================================ #}
+{# Leituras recentes #}
+{# ============================================================ #}
+<p
+    style="font-size:11px;font-weight:500;color:var(--un-text-muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;">
+    Leituras recentes</p>
+<div
+    style="background:var(--un-bg-container);border:0.5px solid var(--un-border-color);border-radius:12px;padding:1rem 1.25rem;margin-bottom:16px;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tbody>
+            {% for item in leituras_recentes %}
+            <tr>
+                <td
+                    style="padding:7px 8px;border-bottom:0.5px solid var(--un-border-color);width:36px;vertical-align:middle;">
+                    {% if item.capa %}
+                    <img src="{{ item.capa }}" alt="Capa"
+                        style="width:28px;height:40px;border-radius:3px;object-fit:cover;display:block;">
+                    {% else %}
+                    <div
+                        style="width:28px;height:40px;border-radius:3px;background:{{ item.tipo_bg }};display:flex;align-items:center;justify-content:center;">
+                        <span style="font-size:10px;font-weight:500;color:{{ item.tipo_color }};">{{ item.tipo_label
+                            }}</span>
+                    </div>
+                    {% endif %}
+                </td>
+                <td style="padding:7px 8px;border-bottom:0.5px solid var(--un-border-color);vertical-align:middle;">
+                    <span style="font-weight:500;color:var(--un-text-primary);">{{ item.nome }}</span>
+                    {% if item.numero %}<span style="color:var(--un-text-muted);"> #{{ item.numero }}</span>{% endif %}
+                </td>
+                <td
+                    style="padding:7px 8px;border-bottom:0.5px solid var(--un-border-color);color:var(--un-text-muted);vertical-align:middle;">
+                    {{ item.editora }}</td>
+                <td
+                    style="padding:7px 8px;border-bottom:0.5px solid var(--un-border-color);color:var(--un-text-muted);text-align:right;vertical-align:middle;white-space:nowrap;">
+                    {{ item.data }}</td>
+                <td
+                    style="padding:7px 8px;border-bottom:0.5px solid var(--un-border-color);text-align:right;vertical-align:middle;white-space:nowrap;">
+                    <span style="font-size:12px;background:var(--un-bg-muted);padding:2px 7px;border-radius:4px;color:var(--un-text-muted);">{{ item.paginas }} pgs</span>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="padding:16px 8px;color:var(--un-text-muted);text-align:center;">Nenhuma leitura
+                    registrada ainda.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# ============================================================ #}
+{# Chart.js #}
+{# ============================================================ #}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+    (function () {
+        const isDark = document.documentElement.classList.contains('dark');
+        const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+        const tickColor = '#888780';
+
+        function pc(id) {
+            const el = document.getElementById(id);
+            if (!el) return null;
+            return {
+                el,
+                labels: el.dataset.labels ? el.dataset.labels.split(',') : [],
+                data: el.dataset.values ? el.dataset.values.split(',').map(Number) : [],
+            };
+        }
+
+        function linha(id, color) {
+            const c = pc(id); if (!c) return;
+            new Chart(c.el, {
+                type: 'line',
+                data: {
+                    labels: c.labels,
+                    datasets: [{
+                        data: c.data,
+                        borderColor: color,
+                        backgroundColor: color + '18',
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: color,
+                        pointRadius: 3,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 }, autoSkip: true, maxTicksLimit: 7, maxRotation: 0 } },
+                        y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 } }, beginAtZero: true },
+                    }
+                }
+            });
+        }
+
+        function barras(id, color) {
+            const c = pc(id); if (!c) return;
+            new Chart(c.el, {
+                type: 'bar',
+                data: {
+                    labels: c.labels,
+                    datasets: [{
+                        data: c.data,
+                        backgroundColor: color,
+                        borderRadius: 3,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 }, autoSkip: true, maxTicksLimit: 12, maxRotation: 0 } },
+                        y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 10 } }, beginAtZero: true },
+                    }
+                }
+            });
+        }
+
+        const VERDE = '#1D9E75';
+        const AZUL = '#378ADD';
+
+        // Páginas
+        linha('cPagDia', VERDE);
+        barras('cPagMes', AZUL);
+
+        // 7 dias
+        barras('c7dQ', VERDE);
+        barras('c7dL', AZUL);
+
+        // Mês corrente
+        barras('cMcQ', VERDE);
+        barras('cMcL', AZUL);
+
+        // Ano corrente
+        barras('cAcQ', VERDE);
+        barras('cAcL', AZUL);
+    })();
+</script>
+
+{% endblock %}

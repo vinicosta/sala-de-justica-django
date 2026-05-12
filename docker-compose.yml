@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_DB: slj_app
+      POSTGRES_USER: slj_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  mysql_legacy:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_DATABASE: salade10_app
+      MYSQL_USER: legacy_user
+      MYSQL_PASSWORD: legacy_pass
+      MYSQL_ROOT_PASSWORD: legacy_root
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_legacy_data:/var/lib/mysql
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - mysql_legacy
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_NAME=slj_app
+      - DATABASE_USER=slj_user
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+
+volumes:
+  db_data:
+  mysql_legacy_data:

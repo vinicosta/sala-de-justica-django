@@ -1,0 +1,10 @@
+{% load i18n %}
+<div id="site-name">
+    {% if site_dropdown %}
+    Sala de Justiça / App
+    {% else %}
+    <a href="{% url 'admin:index' %}">
+        Sala de Justiça / App
+    </a>
+    {% endif %}
+</div>

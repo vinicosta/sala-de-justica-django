@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+*.egg-info/
+dist/
+build/
+
+# Django
+*.log
+*.pot
+local_settings.py
+db.sqlite3
+media/
+staticfiles/
+
+# Capas de edições (geradas em runtime, não versionar)
+media/books/
+media/comics/
+media/magazines/
+
+# Docker
+.docker/
+*.dockerignore
+
+# Ambiente
+.env
+.env*
+!.env.example
+*.sql
+
+# IDEs e editores
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
