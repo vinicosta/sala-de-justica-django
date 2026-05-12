@@ -4,20 +4,16 @@
 
 {% block title %}{{ type_label }} — Sala de Justiça{% endblock %}
 
-{% block nav_quadrinhos %}{% if type_id == 1 %}active{% endif %}{% endblock %}
-{% block nav_livros %}{% if type_id == 2 %}active{% endif %}{% endblock %}
-{% block nav_revistas %}{% if type_id == 3 %}active{% endif %}{% endblock %}
-
 {% block page_title %}{{ type_label }}{% endblock %}
 
 {% block top_bar_actions %}
-<form method="get" class="search-form" id="searchForm">
-    <div class="search-wrap">
-        <span class="material-symbols-outlined search-icon">search</span>
-        <input type="search" name="q" value="{{ q }}" placeholder='Pesquisar… ex: "batman #34"' class="search-input"
+<form method="get" class="slj-search-form" id="searchForm">
+    <div class="slj-search-wrap">
+        <span class="material-symbols-outlined slj-search-icon">search</span>
+        <input type="search" name="q" value="{{ q }}" placeholder='Pesquisar… ex: "batman #34"' class="slj-search-input"
             autocomplete="off" id="searchInput" />
         {% if q %}
-        <a href="?" class="search-clear" title="Limpar">
+        <a href="?" class="slj-search-clear" title="Limpar">
             <span class="material-symbols-outlined">close</span>
         </a>
         {% endif %}
@@ -27,58 +23,53 @@
 
 {% block content %}
 
-<div class="list-meta">
+<div class="slj-list-meta">
     Lista de leitura —
     <strong>{{ total }}</strong>
     {{ type_label|lower }}
-    {% if q %}<span class="search-tag">« {{ q }} »</span>{% endif %}
+    {% if q %}<span class="slj-search-tag">« {{ q }} »</span>{% endif %}
 </div>
 
 {% if issues %}
-<div class="issue-grid">
+<div class="slj-issue-grid">
     {% for issue in issues %}
-    <article class="issue-card" data-issue-id="{{ issue.pk }}"
+    <article class="slj-issue-card" data-issue-id="{{ issue.pk }}"
         data-in-collection="{% if issue.pk in collected_ids %}true{% else %}false{% endif %}"
         data-is-read="{% if issue.pk in read_ids %}true{% else %}false{% endif %}">
-        {# ── Capa ── #}
-        <div class="card-cover-wrap">
+        <div class="slj-card-cover-wrap">
             {% if issue.image %}
-            <img src="{{ issue.image.url }}" alt="{{ issue.name }}" class="card-cover" loading="lazy" />
+            <img src="{{ issue.image.url }}" alt="{{ issue.name }}" class="slj-card-cover" loading="lazy" />
             {% else %}
-            <div class="card-cover card-cover--placeholder">
+            <div class="slj-card-cover slj-card-cover--placeholder">
                 <span class="material-symbols-outlined">image_not_supported</span>
             </div>
             {% endif %}
 
-            {# ── Botões sobrepostos no hover ── #}
-            <div class="card-actions">
-                <button class="action-btn collection-btn" title="Coleção" onclick="handleCollection(this)">
-                    <span class="material-symbols-outlined btn-icon"></span>
-                    <span class="btn-label"></span>
+            <div class="slj-card-actions">
+                <button class="slj-action-btn slj-collection-btn" title="Coleção" onclick="handleCollection(this)">
+                    <span class="material-symbols-outlined slj-btn-icon"></span>
+                    <span class="slj-btn-label"></span>
                 </button>
-                <button class="action-btn read-btn" title="Lido" onclick="handleRead(this)">
-                    <span class="material-symbols-outlined btn-icon"></span>
-                    <span class="btn-label"></span>
+                <button class="slj-action-btn slj-read-btn" title="Lido" onclick="handleRead(this)">
+                    <span class="material-symbols-outlined slj-btn-icon"></span>
+                    <span class="slj-btn-label"></span>
                 </button>
             </div>
         </div>
 
-        {# ── Info ── #}
-        <div class="card-info">
-            <p class="card-title">
+        <div class="slj-card-info">
+            <p class="slj-card-title">
                 {{ issue.title.name }}
                 {% if issue.issue_number %}
-                <span class="card-number">#{{ issue.issue_number }}</span>
+                <span class="slj-card-number">#{{ issue.issue_number }}</span>
                 {% endif %}
             </p>
             {% if issue.name and issue.name != issue.title.name %}
-            <p class="card-subtitle">{{ issue.name }}</p>
+            <p class="slj-card-subtitle">{{ issue.name }}</p>
             {% endif %}
-            <p class="card-meta">
+            <p class="slj-card-meta">
                 {% if issue.title.publisher %}{{ issue.title.publisher.name }}{% endif %}
-                {% if issue.date_publication %}
-                · {{ issue.date_publication|date:"M/Y" }}
-                {% endif %}
+                {% if issue.date_publication %} · {{ issue.date_publication|date:"M/Y" }}{% endif %}
             </p>
         </div>
     </article>
@@ -86,17 +77,27 @@
 </div>
 
 {% else %}
-<div class="empty-state">
-    <span class="material-symbols-outlined empty-icon">search_off</span>
+<div class="slj-empty-state">
+    <span class="material-symbols-outlined slj-empty-icon">search_off</span>
     <p>Nenhuma edição encontrada{% if q %} para "{{ q }}"{% endif %}.</p>
 </div>
 {% endif %}
+
+{# Modal de confirmação #}
+<div class="slj-modal-backdrop" id="confirmModal" style="display:none">
+    <div class="slj-modal">
+        <p class="slj-modal-msg" id="confirmMsg"></p>
+        <div class="slj-modal-actions">
+            <button class="slj-btn slj-btn-ghost" onclick="closeModal()">Cancelar</button>
+            <button class="slj-btn slj-btn-danger" id="confirmBtn">Confirmar</button>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // URLs para o JS
     const TOGGLE_COLLECTION_URL = "{% url 'toggle_collection' 0 %}".replace("/0/", "/");
     const TOGGLE_READ_URL = "{% url 'toggle_read' 0 %}".replace("/0/", "/");
     const CSRF_TOKEN = "{{ csrf_token }}";

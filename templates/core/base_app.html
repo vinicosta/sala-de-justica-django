@@ -1,112 +1,30 @@
 {# templates/core/base_app.html #}
-<!DOCTYPE html>
-<html lang="pt-br" data-theme="dark">
+{# Herda do layout base do Unfold — garante visual 100% idêntico ao dashboard #}
+{% extends "unfold/layouts/base_simple.html" %}
+{% load static i18n %}
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}Sala de Justiça{% endblock %}</title>
+{% block title %}{% block inner_title %}Sala de Justiça{% endblock %} — Sala de Justiça / App{% endblock %}
 
-    {# Google Fonts: Bebas Neue (títulos) + DM Sans (corpo) #}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap"
-        rel="stylesheet">
+{% block branding %}
+{% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
 
-    {# Material Symbols (mesmos ícones do Unfold) #}
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
-        rel="stylesheet" />
+{# ── Topbar: título da página + ações (busca, etc.) ───────────────────────── #}
+{% block content_title %}
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px;">
+    <h1 style="font-size:1.5rem;font-weight:700;margin:0;">{% block page_title %}{% endblock %}</h1>
+    <div>{% block top_bar_actions %}{% endblock %}</div>
+</div>
+{% endblock %}
 
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'core/app.css' %}">
-</head>
+{# ── Conteúdo principal ───────────────────────────────────────────────────── #}
+{% block content %}
+{% endblock %}
 
-<body>
-
-    {# ── Sidebar ─────────────────────────────────────────────────────────────── #}
-    <nav class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <img src="{% static 'core/favicon.png' %}" alt="SLJ" class="sidebar-logo" />
-            <span class="sidebar-title">Sala de Justiça</span>
-            <button class="sidebar-close" onclick="toggleSidebar()">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-
-        <div class="nav-section">
-            <p class="nav-label">Dashboard</p>
-            <a href="/admin/" class="nav-item {% block nav_dashboard %}{% endblock %}">
-                <span class="material-symbols-outlined">grid_view</span> Dashboard
-            </a>
-        </div>
-
-        <div class="nav-section">
-            <p class="nav-label">Acervo</p>
-            <a href="{% url 'quadrinhos' %}" class="nav-item {% block nav_quadrinhos %}{% endblock %}">
-                <span class="material-symbols-outlined">comic_bubble</span> Quadrinhos
-            </a>
-            <a href="{% url 'livros' %}" class="nav-item {% block nav_livros %}{% endblock %}">
-                <span class="material-symbols-outlined">menu_book</span> Livros
-            </a>
-            <a href="{% url 'revistas' %}" class="nav-item {% block nav_revistas %}{% endblock %}">
-                <span class="material-symbols-outlined">newspaper</span> Revistas
-            </a>
-        </div>
-
-        <div class="nav-section">
-            <p class="nav-label">Cadastros</p>
-            <a href="/admin/core/title/" class="nav-item">
-                <span class="material-symbols-outlined">collections_bookmark</span> Títulos
-            </a>
-            <a href="/admin/core/author/" class="nav-item">
-                <span class="material-symbols-outlined">person</span> Autores
-            </a>
-            <a href="/admin/core/publisher/" class="nav-item">
-                <span class="material-symbols-outlined">business</span> Editoras
-            </a>
-        </div>
-
-        <div class="sidebar-footer">
-            <img src="https://www.gravatar.com/avatar/{{ gravatar_hash }}?s=40&d=mp" alt="{{ request.user }}"
-                class="avatar" />
-            <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
-            <a href="/admin/logout/" class="logout-btn" title="Sair">
-                <span class="material-symbols-outlined">logout</span>
-            </a>
-        </div>
-    </nav>
-
-    {# ── Overlay mobile ───────────────────────────────────────────────────────── #}
-    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
-
-    {# ── Main ─────────────────────────────────────────────────────────────────── #}
-    <main class="main-content">
-        <header class="top-bar">
-            <button class="menu-btn" onclick="toggleSidebar()">
-                <span class="material-symbols-outlined">menu</span>
-            </button>
-            <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
-            <div class="top-bar-actions">{% block top_bar_actions %}{% endblock %}</div>
-        </header>
-
-        <div class="content">
-            {% block content %}{% endblock %}
-        </div>
-    </main>
-
-    {# ── Modal de confirmação genérico ────────────────────────────────────────── #}
-    <div class="modal-backdrop" id="confirmModal" style="display:none">
-        <div class="modal">
-            <p class="modal-msg" id="confirmMsg"></p>
-            <div class="modal-actions">
-                <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-                <button class="btn btn-danger" id="confirmBtn">Confirmar</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="{% static 'core/app.js' %}"></script>
-    {% block extra_js %}{% endblock %}
-</body>
-
-</html>
+{# ── CSS + JS do app, mais qualquer extra da página filha ────────────────── #}
+{% block extrascripts %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/app.css' %}">
+<script src="{% static 'core/app.js' %}"></script>
+{% block extra_js %}{% endblock %}
+{% endblock %}
