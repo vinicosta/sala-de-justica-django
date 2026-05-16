@@ -13,6 +13,8 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
 
+LOGIN_URL = "/admin/login/"
+
 INSTALLED_APPS = [
     # Unfold DEVE vir antes de django.contrib.admin
     "unfold",
