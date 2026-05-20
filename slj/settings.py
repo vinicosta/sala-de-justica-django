@@ -131,17 +131,17 @@ UNFOLD = {
                     {
                         "title": "Quadrinhos",
                         "icon": "comic_bubble",
-                        "link": "/quadrinhos/",
+                        "link": "/admin/quadrinhos/",
                     },
                     {
                         "title": "Livros",
                         "icon": "menu_book",
-                        "link": "/livros/",
+                        "link": "/admin/livros/",
                     },
                     {
                         "title": "Revistas",
                         "icon": "newspaper",
-                        "link": "/revistas/",
+                        "link": "/admin/revistas/",
                     },
                 ],
             },

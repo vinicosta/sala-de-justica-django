@@ -1,35 +1,40 @@
 {# templates/core/issue_list.html #}
-{% extends "core/base_app.html" %}
-{% load static %}
+{% extends "unfold/layouts/base.html" %}
+{% load static i18n %}
 
-{% block title %}{{ type_label }} — Sala de Justiça{% endblock %}
+{% block title %}{{ type_label }} — Sala de Justiça / App{% endblock %}
 
-{% block page_title %}{{ type_label }}{% endblock %}
-
-{% block top_bar_actions %}
-<form method="get" class="slj-search-form" id="searchForm">
-    <div class="slj-search-wrap">
-        <span class="material-symbols-outlined slj-search-icon">search</span>
-        <input type="search" name="q" value="{{ q }}" placeholder='Pesquisar… ex: "batman #34"' class="slj-search-input"
-            autocomplete="off" id="searchInput" />
-        {% if q %}
-        <a href="?" class="slj-search-clear" title="Limpar">
-            <span class="material-symbols-outlined">close</span>
-        </a>
-        {% endif %}
-    </div>
-</form>
+{% block branding %}
+{% include "unfold/helpers/site_branding.html" %}
 {% endblock %}
 
 {% block content %}
 
+{# ── Topbar com título e busca ─────────────────────────────────────────── #}
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
+    <h1 style="font-size:1.25rem;font-weight:700;margin:0;">{{ type_label }}</h1>
+    <form method="get" id="searchForm">
+        <div class="slj-search-wrap">
+            <span class="material-symbols-outlined slj-search-icon">search</span>
+            <input type="search" name="q" value="{{ q }}" placeholder='Pesquisar… ex: "batman #34"'
+                class="slj-search-input" autocomplete="off" id="searchInput" />
+            {% if q %}
+            <a href="?" class="slj-search-clear" title="Limpar">
+                <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+{# ── Meta ──────────────────────────────────────────────────────────────── #}
 <div class="slj-list-meta">
     Lista de leitura —
-    <strong>{{ total }}</strong>
-    {{ type_label|lower }}
+    <strong>{{ total }}</strong> {{ type_label|lower }}
     {% if q %}<span class="slj-search-tag">« {{ q }} »</span>{% endif %}
 </div>
 
+{# ── Grid ──────────────────────────────────────────────────────────────── #}
 {% if issues %}
 <div class="slj-issue-grid">
     {% for issue in issues %}
@@ -46,11 +51,11 @@
             {% endif %}
 
             <div class="slj-card-actions">
-                <button class="slj-action-btn slj-collection-btn" title="Coleção" onclick="handleCollection(this)">
+                <button class="slj-action-btn slj-collection-btn" onclick="handleCollection(this)">
                     <span class="material-symbols-outlined slj-btn-icon"></span>
                     <span class="slj-btn-label"></span>
                 </button>
-                <button class="slj-action-btn slj-read-btn" title="Lido" onclick="handleRead(this)">
+                <button class="slj-action-btn slj-read-btn" onclick="handleRead(this)">
                     <span class="material-symbols-outlined slj-btn-icon"></span>
                     <span class="slj-btn-label"></span>
                 </button>
@@ -83,7 +88,7 @@
 </div>
 {% endif %}
 
-{# Modal de confirmação #}
+{# ── Modal ─────────────────────────────────────────────────────────────── #}
 <div class="slj-modal-backdrop" id="confirmModal" style="display:none">
     <div class="slj-modal">
         <p class="slj-modal-msg" id="confirmMsg"></p>
@@ -96,7 +101,10 @@
 
 {% endblock %}
 
-{% block extra_js %}
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'core/app.css' %}">
+<script src="{% static 'core/app.js' %}"></script>
 <script>
     const TOGGLE_COLLECTION_URL = "{% url 'toggle_collection' 0 %}".replace("/0/", "/");
     const TOGGLE_READ_URL = "{% url 'toggle_read' 0 %}".replace("/0/", "/");

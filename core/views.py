@@ -1,7 +1,7 @@
 # core/views.py
 
 import json
-from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -31,14 +31,6 @@ def _parse_search(q: str):
 
 
 def _next_issues_for_user(user, type_id: int) -> list:
-    """
-    Para cada título na lista de leitura do usuário (filtrado por type_id),
-    retorna o ID da próxima edição a ser lida, seguindo a regra:
-
-    - Se nenhuma edição foi lida → primeira edição do título
-    - Se há edições lidas → a edição imediatamente seguinte à última lida
-    - Se a última edição do título já foi lida → título não aparece na lista
-    """
     title_ids = list(
         ReadingList.objects
         .filter(user=user, title__type_id=type_id)
@@ -57,7 +49,6 @@ def _next_issues_for_user(user, type_id: int) -> list:
     next_ids = []
 
     for title_id in title_ids:
-        # Todas as edições do título em ordem cronológica
         issues = list(
             Issue.objects
             .filter(title_id=title_id)
@@ -68,7 +59,6 @@ def _next_issues_for_user(user, type_id: int) -> list:
         if not issues:
             continue
 
-        # Encontra o índice da última edição lida dentro deste título
         last_read_index = -1
         for i, issue_id in enumerate(issues):
             if issue_id in read_issue_ids:
@@ -76,7 +66,6 @@ def _next_issues_for_user(user, type_id: int) -> list:
 
         next_index = last_read_index + 1
 
-        # Se já leu a última edição → título concluído, não aparece
         if next_index >= len(issues):
             continue
 
@@ -85,7 +74,7 @@ def _next_issues_for_user(user, type_id: int) -> list:
     return next_ids
 
 
-@login_required
+@staff_member_required
 def issue_list(request, type_id: int, type_label: str):
     user = request.user
     q    = request.GET.get("q", "").strip()
@@ -133,9 +122,7 @@ def issue_list(request, type_id: int, type_label: str):
     return render(request, "core/issue_list.html", context)
 
 
-# ── Ações AJAX ────────────────────────────────────────────────────────────────
-
-@login_required
+@staff_member_required
 @require_POST
 def toggle_collection(request, issue_id: int):
     issue = get_object_or_404(Issue, pk=issue_id)
@@ -156,7 +143,7 @@ def toggle_collection(request, issue_id: int):
     return JsonResponse({"status": "added"})
 
 
-@login_required
+@staff_member_required
 @require_POST
 def toggle_read(request, issue_id: int):
     issue = get_object_or_404(Issue, pk=issue_id)
