@@ -1,0 +1,295 @@
+{# templates/core/issue_detail.html #}
+{% extends "core/base_app.html" %}
+{% load static %}
+
+{% block title %}{{ issue.title.name }}{% if issue.issue_number %} #{{ issue.issue_number }}{% endif %} — Sala de Justiça{% endblock %}
+
+{% block nav_quadrinhos %}{% if type_id == 1 %}active{% endif %}{% endblock %}
+{% block nav_livros %}{% if type_id == 2 %}active{% endif %}{% endblock %}
+{% block nav_revistas %}{% if type_id == 3 %}active{% endif %}{% endblock %}
+
+{% block page_title %}{{ type_label }}{% endblock %}
+
+{% block content %}
+<div class="detail-wrap">
+
+    {# ── Cabeçalho ── #}
+    <div class="detail-header">
+        <div class="detail-header-text">
+            <h2 class="detail-title">
+                {{ issue.title.name }}
+                {% if issue.issue_number %}
+                <span class="detail-number">#{{ issue.issue_number }}</span>
+                {% endif %}
+            </h2>
+            <p class="detail-sub">
+                {% if show_authors and issue.authors.all %}
+                    {% for author in issue.authors.all %}{{ author.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    {% if issue.title.publisher %} — {% endif %}
+                {% endif %}
+                {% if issue.title.publisher %}{{ issue.title.publisher.name }}{% endif %}
+                {% if issue.date_publication %}
+                    {% if issue.title.publisher %} · {% endif %}
+                    {{ issue.date_publication|date:"N/Y" }}
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    {# ── Barra de ações ── #}
+    <div class="detail-actions-bar">
+        {# Botões esquerda: editar, excluir, coleção, lido #}
+        <div class="detail-actions-left">
+            <a href="#" class="action-pill action-pill--edit" title="Editar edição">
+                <span class="material-symbols-outlined">edit</span>
+            </a>
+            <button class="action-pill action-pill--delete" title="Excluir edição" onclick="confirmDelete()">
+                <span class="material-symbols-outlined">delete</span>
+            </button>
+            <button
+                class="action-pill action-pill--collection {% if in_collection %}is-active{% endif %}"
+                id="btnCollection"
+                title="{% if in_collection %}Remover da coleção{% else %}Adicionar à coleção{% endif %}"
+                onclick="handleCollectionDetail()">
+                <span class="material-symbols-outlined">
+                    {% if in_collection %}check_circle{% else %}add_circle{% endif %}
+                </span>
+            </button>
+            <button
+                class="action-pill action-pill--read {% if is_read %}is-active{% endif %}"
+                id="btnRead"
+                title="{% if is_read %}Desmarcar como lido{% else %}Marcar como lido{% endif %}"
+                onclick="handleReadDetail()">
+                <span class="material-symbols-outlined">
+                    {% if is_read %}done_all{% else %}bookmark_add{% endif %}
+                </span>
+            </button>
+        </div>
+
+        {# Botões direita: navegação #}
+        <div class="detail-actions-right">
+            <a href="{{ nav.first_url|default:'#' }}"
+               class="action-pill action-pill--nav {% if not nav.first_url %}disabled{% endif %}"
+               title="Primeira edição">
+                <span class="material-symbols-outlined">first_page</span>
+            </a>
+            <a href="{{ nav.prev_url|default:'#' }}"
+               class="action-pill action-pill--nav {% if not nav.prev_url %}disabled{% endif %}"
+               title="Edição anterior">
+                <span class="material-symbols-outlined">chevron_left</span>
+            </a>
+            <a href="{{ nav.grid_url }}"
+               class="action-pill action-pill--nav action-pill--grid"
+               title="Ver todas as edições">
+                <span class="material-symbols-outlined">grid_view</span>
+            </a>
+            <a href="{{ nav.next_url|default:'#' }}"
+               class="action-pill action-pill--nav {% if not nav.next_url %}disabled{% endif %}"
+               title="Próxima edição">
+                <span class="material-symbols-outlined">chevron_right</span>
+            </a>
+            <a href="{{ nav.last_url|default:'#' }}"
+               class="action-pill action-pill--nav {% if not nav.last_url %}disabled{% endif %}"
+               title="Última edição">
+                <span class="material-symbols-outlined">last_page</span>
+            </a>
+            <span class="nav-position">{{ nav.position }}</span>
+        </div>
+    </div>
+
+    {# ── Corpo: capa + metadados ── #}
+    <div class="detail-body">
+        {# Capa #}
+        <div class="detail-cover-wrap">
+            {% if issue.image %}
+            <img src="{{ issue.image.url }}" alt="{{ issue.name }}" class="detail-cover" />
+            {% else %}
+            <div class="detail-cover detail-cover--placeholder">
+                <span class="material-symbols-outlined">image_not_supported</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Metadados #}
+        <div class="detail-meta">
+            {% if issue.synopsis %}
+            <p class="detail-synopsis">{{ issue.synopsis }}</p>
+            {% endif %}
+
+            <dl class="detail-dl">
+                {% if show_isbn and issue.isbn %}
+                <div class="detail-dl-row">
+                    <dt>ISBN:</dt>
+                    <dd>{{ issue.isbn }}</dd>
+                </div>
+                {% endif %}
+
+                {% if show_genre and issue.title.genre %}
+                <div class="detail-dl-row">
+                    <dt>Gênero:</dt>
+                    <dd>{{ issue.title.genre.name }}</dd>
+                </div>
+                {% endif %}
+
+                {% if issue.title.subgenre %}
+                <div class="detail-dl-row">
+                    <dt>Subgênero:</dt>
+                    <dd>{{ issue.title.subgenre.name }}</dd>
+                </div>
+                {% endif %}
+
+                {% if show_format and issue.title.format %}
+                <div class="detail-dl-row">
+                    <dt>Formato:</dt>
+                    <dd>{{ issue.title.format.name }}</dd>
+                </div>
+                {% endif %}
+
+                {% if issue.number_pages %}
+                <div class="detail-dl-row">
+                    <dt>Páginas:</dt>
+                    <dd>{{ issue.number_pages }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+
+            {% if collection_item %}
+            <p class="detail-added">
+                {% if collection_item.added_date %}
+                Adicionado na coleção em {{ collection_item.added_date|date:"d/m/Y" }}.
+                {% else %}
+                Na coleção.
+                {% endif %}
+                {% if collection_item.has_physical and collection_item.has_digital %}
+                <span class="detail-badge detail-badge--both">Físico + Digital</span>
+                {% elif collection_item.has_physical %}
+                <span class="detail-badge detail-badge--physical">Físico</span>
+                {% elif collection_item.has_digital %}
+                <span class="detail-badge detail-badge--digital">Digital</span>
+                {% endif %}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+{# ── Modal de confirmação ── #}
+<div class="modal-backdrop" id="confirmModal" style="display:none">
+    <div class="modal">
+        <p class="modal-msg" id="confirmMsg"></p>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeDetailModal()">Cancelar</button>
+            <button class="btn btn-danger" id="confirmBtn">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const ISSUE_ID = {{ issue.pk }};
+    const TOGGLE_COLLECTION_URL = "{% url 'toggle_collection' 0 %}".replace("/0/", "/");
+    const TOGGLE_READ_URL = "{% url 'toggle_read' 0 %}".replace("/0/", "/");
+    const CSRF_TOKEN = "{{ csrf_token }}";
+
+    let _detailConfirmCallback = null;
+
+    function openDetailModal(msg, callback) {
+        document.getElementById("confirmMsg").textContent = msg;
+        document.getElementById("confirmModal").style.display = "flex";
+        _detailConfirmCallback = callback;
+    }
+
+    function closeDetailModal() {
+        document.getElementById("confirmModal").style.display = "none";
+        _detailConfirmCallback = null;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("confirmBtn").addEventListener("click", async () => {
+            if (_detailConfirmCallback) await _detailConfirmCallback();
+            closeDetailModal();
+        });
+        document.addEventListener("keydown", e => {
+            if (e.key === "Escape") closeDetailModal();
+            if (e.key === "ArrowLeft") {
+                const prev = document.querySelector(".action-pill--nav[title='Edição anterior']:not(.disabled)");
+                if (prev) prev.click();
+            }
+            if (e.key === "ArrowRight") {
+                const next = document.querySelector(".action-pill--nav[title='Próxima edição']:not(.disabled)");
+                if (next) next.click();
+            }
+        });
+    });
+
+    async function postJSON(url, body = {}) {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN },
+            body: JSON.stringify(body),
+        });
+        return res.json();
+    }
+
+    function handleCollectionDetail() {
+        const btn = document.getElementById("btnCollection");
+        const inCollection = btn.classList.contains("is-active");
+        const url = TOGGLE_COLLECTION_URL + ISSUE_ID + "/";
+
+        if (inCollection) {
+            openDetailModal("Remover esta edição da sua coleção?", async () => {
+                const data = await postJSON(url, { confirm: true });
+                if (data.status === "removed") {
+                    btn.classList.remove("is-active");
+                    btn.querySelector(".material-symbols-outlined").textContent = "add_circle";
+                    btn.title = "Adicionar à coleção";
+                    document.querySelector(".detail-added")?.remove();
+                }
+            });
+        } else {
+            postJSON(url).then(data => {
+                if (data.status === "added") {
+                    btn.classList.add("is-active");
+                    btn.querySelector(".material-symbols-outlined").textContent = "check_circle";
+                    btn.title = "Remover da coleção";
+                }
+            });
+        }
+    }
+
+    function handleReadDetail() {
+        const btn = document.getElementById("btnRead");
+        const isRead = btn.classList.contains("is-active");
+        const url = TOGGLE_READ_URL + ISSUE_ID + "/";
+
+        if (isRead) {
+            openDetailModal("Desmarcar esta edição como lida?", async () => {
+                const data = await postJSON(url, { confirm: true });
+                if (data.status === "removed") {
+                    btn.classList.remove("is-active");
+                    btn.querySelector(".material-symbols-outlined").textContent = "bookmark_add";
+                    btn.title = "Marcar como lido";
+                }
+            });
+        } else {
+            postJSON(url).then(data => {
+                if (data.status === "added") {
+                    btn.classList.add("is-active");
+                    btn.querySelector(".material-symbols-outlined").textContent = "done_all";
+                    btn.title = "Desmarcar como lido";
+                }
+            });
+        }
+    }
+
+    function confirmDelete() {
+        openDetailModal("Excluir esta edição permanentemente? Esta ação não pode ser desfeita.", () => {
+            // Placeholder — view de delete será adicionada na próxima etapa
+            alert("Delete ainda não implementado.");
+        });
+    }
+</script>
+{% endblock %}

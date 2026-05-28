@@ -1,4 +1,5 @@
 # core/models.py
+# Arquivo completo — substitui o models.py atual
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -9,15 +10,15 @@ import re
 def issue_cover_path(instance, filename):
     type_map = {1: "comics", 2: "books", 3: "magazines"}
     type_folder = type_map.get(instance.title.type_id, "others")
-    
-    # Normaliza: remove acentos, espaços viram underline, lowercase
+
     title_name = instance.title.name
     normalized = unicodedata.normalize('NFKD', title_name)
     normalized = normalized.encode('ascii', 'ignore').decode('ascii')
     normalized = re.sub(r'\s+', '_', normalized).lower()
     prefix = normalized[:3]
-    
+
     return f"covers/{type_folder}/{prefix}/{filename}"
+
 
 class Type(models.Model):
     name = models.CharField(max_length=255)
@@ -230,9 +231,13 @@ class CollectionItem(models.Model):
         User, on_delete=models.CASCADE, related_name="collection_items"
     )
     added_date = models.DateField(null=True, blank=True)
-    is_digital = models.BooleanField(
+    has_physical = models.BooleanField(
         default=False,
-        help_text="Marque se possui apenas a versão digital"
+        help_text="Possui a versão física",
+    )
+    has_digital = models.BooleanField(
+        default=False,
+        help_text="Possui a versão digital",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -243,8 +248,13 @@ class CollectionItem(models.Model):
         verbose_name_plural = "Acervo"
 
     def __str__(self):
-        digital = " (digital)" if self.is_digital else ""
-        return f"{self.user.username} › {self.issue}{digital}"
+        flags = []
+        if self.has_physical:
+            flags.append("físico")
+        if self.has_digital:
+            flags.append("digital")
+        suffix = f" ({', '.join(flags)})" if flags else ""
+        return f"{self.user.username} › {self.issue}{suffix}"
 
 
 class ReadItem(models.Model):

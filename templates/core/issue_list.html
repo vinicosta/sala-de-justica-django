@@ -1,17 +1,11 @@
 {# templates/core/issue_list.html #}
-{% extends "unfold/layouts/base.html" %}
+{% extends "admin/base_site.html" %}
 {% load static i18n %}
 
 {% block title %}{{ type_label }} — Sala de Justiça / App{% endblock %}
 
-{% block branding %}
-{% include "unfold/helpers/site_branding.html" %}
-{% endblock %}
-
-{% block content %}
-
-{# ── Topbar com título e busca ─────────────────────────────────────────── #}
-<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
+{% block content_title %}
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:4px;">
     <h1 style="font-size:1.25rem;font-weight:700;margin:0;">{{ type_label }}</h1>
     <form method="get" id="searchForm">
         <div class="slj-search-wrap">
@@ -26,19 +20,21 @@
         </div>
     </form>
 </div>
+{% endblock %}
 
-{# ── Meta ──────────────────────────────────────────────────────────────── #}
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/app.css' %}">
+
 <div class="slj-list-meta">
     Lista de leitura —
     <strong>{{ total }}</strong> {{ type_label|lower }}
     {% if q %}<span class="slj-search-tag">« {{ q }} »</span>{% endif %}
 </div>
 
-{# ── Grid ──────────────────────────────────────────────────────────────── #}
 {% if issues %}
 <div class="slj-issue-grid">
     {% for issue in issues %}
-    <article class="slj-issue-card" data-issue-id="{{ issue.pk }}"
+    <article class="slj-issue-card" data-issue-id="{{ issue.pk }}" onclick="goToDetail({{ issue.pk }})"
         data-in-collection="{% if issue.pk in collected_ids %}true{% else %}false{% endif %}"
         data-is-read="{% if issue.pk in read_ids %}true{% else %}false{% endif %}">
         <div class="slj-card-cover-wrap">
@@ -63,6 +59,25 @@
         </div>
 
         <div class="slj-card-info">
+            {% if type_id == 2 %}
+            {# ── Layout Livros ── #}
+            <p class="slj-card-title">
+                {{ issue.name }}
+            </p>
+            {% if issue.name != issue.title.name or issue.issue_number %}
+            <p class="slj-card-subtitle">
+                {% if issue.name != issue.title.name %}{{ issue.title.name }}{% endif %}
+                {% if issue.issue_number %}
+                <span class="slj-card-number"> vol. {{ issue.issue_number }}</span>
+                {% endif %}
+            </p>
+            {% endif %}
+            <p class="slj-card-meta">
+                {% for author in issue.authors.all %}{{ author.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                {% if issue.title.publisher %} · {{ issue.title.publisher.name }}{% endif %}
+            </p>
+            {% else %}
+            {# ── Layout Quadrinhos / Revistas ── #}
             <p class="slj-card-title">
                 {{ issue.title.name }}
                 {% if issue.issue_number %}
@@ -76,6 +91,7 @@
                 {% if issue.title.publisher %}{{ issue.title.publisher.name }}{% endif %}
                 {% if issue.date_publication %} · {{ issue.date_publication|date:"M/Y" }}{% endif %}
             </p>
+            {% endif %}
         </div>
     </article>
     {% endfor %}
@@ -88,7 +104,7 @@
 </div>
 {% endif %}
 
-{# ── Modal ─────────────────────────────────────────────────────────────── #}
+{# Modal #}
 <div class="slj-modal-backdrop" id="confirmModal" style="display:none">
     <div class="slj-modal">
         <p class="slj-modal-msg" id="confirmMsg"></p>
@@ -99,15 +115,16 @@
     </div>
 </div>
 
-{% endblock %}
-
-{% block extrahead %}
-{{ block.super }}
-<link rel="stylesheet" href="{% static 'core/app.css' %}">
-<script src="{% static 'core/app.js' %}"></script>
+{# Constantes JS — definidas antes do app.js #}
 <script>
     const TOGGLE_COLLECTION_URL = "{% url 'toggle_collection' 0 %}".replace("/0/", "/");
     const TOGGLE_READ_URL = "{% url 'toggle_read' 0 %}".replace("/0/", "/");
     const CSRF_TOKEN = "{{ csrf_token }}";
+    const NEXT_ISSUE_URL = "{% url 'next_issue' 0 %}".replace("/0/", "/");
+
+    function goToDetail(issueId) {
+        window.location.href = `/${slug}/${issueId}/`;
+    }
 </script>
+<script src="{% static 'core/app.js' %}"></script>
 {% endblock %}
