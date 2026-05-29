@@ -1,42 +1,14 @@
 /* static/core/app.js */
 
-function initCard(card) {
-    const inCollection = card.dataset.inCollection === "true";
-    const isRead = card.dataset.isRead === "true";
-    setCollectionState(card.querySelector(".slj-collection-btn"), inCollection);
-    setReadState(card.querySelector(".slj-read-btn"), isRead);
+// ── Sidebar mobile ────────────────────────────────────────────────────────
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("open");
+    document.getElementById("overlay").classList.toggle("open");
 }
 
-function setCollectionState(btn, inCollection) {
-    const icon = btn.querySelector(".slj-btn-icon");
-    const label = btn.querySelector(".slj-btn-label");
-    if (inCollection) {
-        btn.classList.add("in-collection");
-        icon.textContent = "check_circle";
-        label.textContent = "Na coleção";
-    } else {
-        btn.classList.remove("in-collection");
-        icon.textContent = "add_circle";
-        label.textContent = "Colecionar";
-    }
-}
-
-function setReadState(btn, isRead) {
-    const icon = btn.querySelector(".slj-btn-icon");
-    const label = btn.querySelector(".slj-btn-label");
-    if (isRead) {
-        btn.classList.add("is-read");
-        icon.textContent = "done_all";
-        label.textContent = "Lido";
-    } else {
-        btn.classList.remove("is-read");
-        icon.textContent = "bookmark_add";
-        label.textContent = "Marcar lido";
-    }
-}
-
+// ── Init ──────────────────────────────────────────────────────────────────
 function sljInit() {
-    document.querySelectorAll(".slj-issue-card").forEach(card => initCard(card));
+    document.querySelectorAll(".issue-card").forEach(card => initCard(card));
 
     const confirmBtn = document.getElementById("confirmBtn");
     if (confirmBtn && !confirmBtn._sljBound) {
@@ -57,7 +29,45 @@ if (document.readyState === "loading") {
     sljInit();
 }
 
-// ── HTTP ─────────────────────────────────────────────────────────────────
+// ── Estado dos cards ──────────────────────────────────────────────────────
+function initCard(card) {
+    const inCollection = card.dataset.inCollection === "true";
+    const isRead = card.dataset.isRead === "true";
+    setCollectionState(card.querySelector(".collection-btn"), inCollection);
+    setReadState(card.querySelector(".read-btn"), isRead);
+}
+
+function setCollectionState(btn, inCollection) {
+    if (!btn) return;
+    const icon = btn.querySelector(".btn-icon");
+    const label = btn.querySelector(".btn-label");
+    if (inCollection) {
+        btn.classList.add("in-collection");
+        icon.textContent = "check_circle";
+        label.textContent = "Na coleção";
+    } else {
+        btn.classList.remove("in-collection");
+        icon.textContent = "add_circle";
+        label.textContent = "Colecionar";
+    }
+}
+
+function setReadState(btn, isRead) {
+    if (!btn) return;
+    const icon = btn.querySelector(".btn-icon");
+    const label = btn.querySelector(".btn-label");
+    if (isRead) {
+        btn.classList.add("is-read");
+        icon.textContent = "done_all";
+        label.textContent = "Lido";
+    } else {
+        btn.classList.remove("is-read");
+        icon.textContent = "bookmark_add";
+        label.textContent = "Marcar lido";
+    }
+}
+
+// ── HTTP ──────────────────────────────────────────────────────────────────
 async function postJSON(url, body = {}) {
     const res = await fetch(url, {
         method: "POST",
@@ -70,15 +80,10 @@ async function postJSON(url, body = {}) {
     return res.json();
 }
 
-async function getJSON(url) {
-    const res = await fetch(url);
-    return res.json();
-}
-
 // ── Toggle Coleção ────────────────────────────────────────────────────────
-function handleCollection(btn) {
+function handleCollection(event, btn) {
     event.stopPropagation();
-    const card = btn.closest(".slj-issue-card");
+    const card = btn.closest(".issue-card");
     const issueId = card.dataset.issueId;
     const url = TOGGLE_COLLECTION_URL + issueId + "/";
 
@@ -101,9 +106,9 @@ function handleCollection(btn) {
 }
 
 // ── Toggle Lido ───────────────────────────────────────────────────────────
-function handleRead(btn) {
+function handleRead(event, btn) {
     event.stopPropagation();
-    const card = btn.closest(".slj-issue-card");
+    const card = btn.closest(".issue-card");
     const issueId = card.dataset.issueId;
     const url = TOGGLE_READ_URL + issueId + "/";
 
@@ -116,94 +121,13 @@ function handleRead(btn) {
             }
         });
     } else {
-        postJSON(url).then(async data => {
+        postJSON(url).then(data => {
             if (data.status === "added") {
-                // Busca a próxima edição do título
-                const next = await getJSON(NEXT_ISSUE_URL + issueId + "/");
-
-                if (next.status === "completed") {
-                    // Título concluído — remove o card com animação
-                    card.style.transition = "opacity .4s, transform .4s";
-                    card.style.opacity = "0";
-                    card.style.transform = "scale(0.9)";
-                    setTimeout(() => card.remove(), 400);
-                } else if (next.status === "next") {
-                    // Atualiza o card para a próxima edição
-                    updateCard(card, next.issue);
-                }
+                card.dataset.isRead = "true";
+                setReadState(btn, true);
             }
         });
     }
-}
-
-function updateCard(card, issue) {
-    // Atualiza data-attributes
-    card.dataset.issueId = issue.id;
-    card.dataset.inCollection = issue.in_collection ? "true" : "false";
-    card.dataset.isRead = issue.is_read ? "true" : "false";
-
-    // Capa
-    const coverWrap = card.querySelector(".slj-card-cover-wrap");
-    const existingImg = coverWrap.querySelector(".slj-card-cover:not(.slj-card-cover--placeholder)");
-    const existingPlaceholder = coverWrap.querySelector(".slj-card-cover--placeholder");
-
-    if (issue.image_url) {
-        if (existingImg) {
-            existingImg.src = issue.image_url;
-            existingImg.alt = issue.name;
-        } else {
-            if (existingPlaceholder) existingPlaceholder.remove();
-            const img = document.createElement("img");
-            img.src = issue.image_url;
-            img.alt = issue.name;
-            img.className = "slj-card-cover";
-            img.loading = "lazy";
-            coverWrap.insertBefore(img, coverWrap.firstChild);
-        }
-    } else {
-        if (existingImg) existingImg.remove();
-        if (!existingPlaceholder) {
-            const ph = document.createElement("div");
-            ph.className = "slj-card-cover slj-card-cover--placeholder";
-            ph.innerHTML = '<span class="material-symbols-outlined">image_not_supported</span>';
-            coverWrap.insertBefore(ph, coverWrap.firstChild);
-        }
-    }
-
-    // Info
-    const titleEl = card.querySelector(".slj-card-title");
-    titleEl.childNodes[0].textContent = issue.title_name + " ";
-    const numEl = titleEl.querySelector(".slj-card-number");
-    if (issue.issue_number) {
-        if (numEl) numEl.textContent = "#" + issue.issue_number;
-        else {
-            const span = document.createElement("span");
-            span.className = "slj-card-number";
-            span.textContent = "#" + issue.issue_number;
-            titleEl.appendChild(span);
-        }
-    } else if (numEl) {
-        numEl.remove();
-    }
-
-    const subtitleEl = card.querySelector(".slj-card-subtitle");
-    if (issue.name && issue.name !== issue.title_name) {
-        if (subtitleEl) subtitleEl.textContent = issue.name;
-    } else if (subtitleEl) {
-        subtitleEl.textContent = "";
-    }
-
-    const metaEl = card.querySelector(".slj-card-meta");
-    metaEl.textContent = [issue.publisher, issue.date].filter(Boolean).join(" · ");
-
-    // Atualiza botões
-    setCollectionState(card.querySelector(".slj-collection-btn"), issue.in_collection);
-    setReadState(card.querySelector(".slj-read-btn"), issue.is_read);
-
-    // Animação de troca
-    card.style.transition = "opacity .2s";
-    card.style.opacity = "0";
-    setTimeout(() => { card.style.opacity = "1"; }, 200);
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────

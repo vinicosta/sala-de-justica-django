@@ -1,11 +1,11 @@
 # core/views.py
 
 import json
-import random
+from django.contrib.admin import site as admin_site
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
 from .models import CollectionItem, Issue, ReadItem, ReadingList, Title
@@ -34,10 +34,6 @@ def _parse_search(q: str):
 
 
 def _next_issues_for_user(user, type_id: int) -> list:
-    """
-    Para cada título na lista de leitura do usuário (filtrado por type_id),
-    retorna o ID da próxima edição a ser lida.
-    """
     title_ids = list(
         ReadingList.objects
         .filter(user=user, title__type_id=type_id)
@@ -86,7 +82,6 @@ def _type_slug(type_id: int) -> str:
 
 
 def _ordered_issues_for_title(title_id: int):
-    """Retorna todas as edições de um título em ordem cronológica."""
     return list(
         Issue.objects
         .filter(title_id=title_id)
@@ -95,33 +90,33 @@ def _ordered_issues_for_title(title_id: int):
     )
 
 
-# ── Views públicas ────────────────────────────────────────────────────────────
+def _admin_context(request: object) -> dict:
+    """Injeta o contexto do AdminSite para que os templates do Unfold funcionem."""
+    ctx = admin_site.each_context(request)
+    ctx["is_nav_sidebar_enabled"] = True
+    # branding é normalmente um block; forçamos True para o navigation_header
+    # mostrar o site_icon quando site_logo é None
+    ctx["branding"] = True
+    return ctx
+
+
+# ── Views ─────────────────────────────────────────────────────────────────────
 
 @login_required
 def issue_list(request, type_id: int, type_label: str):
     user = request.user
     q    = request.GET.get("q", "").strip()
+    slug = _type_slug(type_id)
 
     next_issue_ids = _next_issues_for_user(user, type_id)
-
-    if not next_issue_ids:
-        context = {
-            "type_label":    type_label,
-            "type_id":       type_id,
-            "issues":        [],
-            "total":         0,
-            "collected_ids": set(),
-            "read_ids":      set(),
-            "q":             q,
-        }
-        return render(request, "core/issue_list.html", context)
 
     qs = (
         Issue.objects
         .filter(pk__in=next_issue_ids)
         .select_related("title", "title__publisher", "title__type")
         .order_by("date_publication", "title__name", "issue_number")
-    )
+        .prefetch_related("authors")
+    ) if next_issue_ids else Issue.objects.none()
 
     if q:
         qs = qs.filter(_parse_search(q))
@@ -133,15 +128,17 @@ def issue_list(request, type_id: int, type_label: str):
         ReadItem.objects.filter(user=user).values_list("issue_id", flat=True)
     )
 
-    context = {
+    context = _admin_context(request)
+    context.update({
         "type_label":    type_label,
         "type_id":       type_id,
+        "slug":          slug,
         "issues":        qs,
         "total":         qs.count(),
         "collected_ids": collected_ids,
         "read_ids":      read_ids,
         "q":             q,
-    }
+    })
     return render(request, "core/issue_list.html", context)
 
 
@@ -157,7 +154,6 @@ def issue_detail(request, type_id: int, type_label: str, issue_id: int):
         title__type_id=type_id,
     )
 
-    # Navegação — todas as edições do título em ordem
     sibling_ids = _ordered_issues_for_title(issue.title_id)
     try:
         current_index = sibling_ids.index(issue_id)
@@ -165,12 +161,12 @@ def issue_detail(request, type_id: int, type_label: str, issue_id: int):
         current_index = 0
 
     total_siblings = len(sibling_ids)
-    first_id   = sibling_ids[0]                          if total_siblings > 0 else None
-    prev_id    = sibling_ids[current_index - 1]          if current_index > 0 else None
-    next_id    = sibling_ids[current_index + 1]          if current_index < total_siblings - 1 else None
-    last_id    = sibling_ids[-1]                         if total_siblings > 0 else None
-
     slug = _type_slug(type_id)
+
+    first_id = sibling_ids[0]             if total_siblings > 0 else None
+    prev_id  = sibling_ids[current_index - 1] if current_index > 0 else None
+    next_id  = sibling_ids[current_index + 1] if current_index < total_siblings - 1 else None
+    last_id  = sibling_ids[-1]            if total_siblings > 0 else None
 
     nav = {
         "first_url": f"/{slug}/{first_id}/" if first_id and first_id != issue_id else None,
@@ -181,11 +177,11 @@ def issue_detail(request, type_id: int, type_label: str, issue_id: int):
         "position":  f"{current_index + 1} / {total_siblings}",
     }
 
-    # Estado do usuário para esta edição
     collection_item = CollectionItem.objects.filter(issue=issue, user=user).first()
     is_read = ReadItem.objects.filter(issue=issue, user=user).exists()
 
-    context = {
+    context = _admin_context(request)
+    context.update({
         "issue":           issue,
         "title":           issue.title,
         "type_label":      type_label,
@@ -195,14 +191,11 @@ def issue_detail(request, type_id: int, type_label: str, issue_id: int):
         "collection_item": collection_item,
         "in_collection":   collection_item is not None,
         "is_read":         is_read,
-        # Mostrar formato só para quadrinhos (type_id=1)
         "show_format":     type_id == 1,
-        # Mostrar ISBN e autores só para livros (type_id=2)
         "show_isbn":       type_id == 2,
         "show_authors":    type_id == 2,
-        # Mostrar gênero só para livros
         "show_genre":      type_id == 2,
-    }
+    })
     return render(request, "core/issue_detail.html", context)
 
 
@@ -227,6 +220,36 @@ def toggle_collection(request, issue_id: int):
         return JsonResponse({"status": "confirm_needed"})
 
     return JsonResponse({"status": "added"})
+
+
+@login_required
+@require_POST
+def toggle_format(request, issue_id: int):
+    issue = get_object_or_404(Issue, pk=issue_id)
+    user  = request.user
+
+    item = CollectionItem.objects.filter(issue=issue, user=user).first()
+    if not item:
+        return JsonResponse({"status": "error", "message": "Não está na coleção"}, status=400)
+
+    body  = json.loads(request.body or "{}")
+    fmt   = body.get("format")   # "physical" or "digital"
+    value = body.get("active", True)
+
+    if fmt == "physical":
+        item.has_physical = value
+    elif fmt == "digital":
+        item.has_digital = value
+    else:
+        return JsonResponse({"status": "error", "message": "Formato inválido"}, status=400)
+
+    item.save()
+    return JsonResponse({
+        "status":       "ok",
+        "value":        value,
+        "has_physical": item.has_physical,
+        "has_digital":  item.has_digital,
+    })
 
 
 @login_required

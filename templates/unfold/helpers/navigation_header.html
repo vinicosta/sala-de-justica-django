@@ -1,0 +1,19 @@
+{% load unfold static %}
+<div
+    class="border-b border-base-200 flex gap-3 items-center h-[65px] mb-6 dark:border-base-800 px-3 {% element_classes 'navigation_header' %}">
+    <div class="bg-transparent flex font-semibold gap-3 grow min-w-0 h-[64px] items-center px-3">
+        {% if site_logo %}
+        {% include "unfold/helpers/site_logo.html" %}
+        {% else %}
+        <img src="{% static 'core/favicon.png' %}" alt="SLJ" class="h-8 w-8 rounded-lg flex-shrink-0" />
+        <span class="truncate text-font-default-light dark:text-font-default-dark">
+            {{ site_title }}
+        </span>
+        {% endif %}
+    </div>
+    <span
+        class="material-symbols-outlined block cursor-pointer h-[18px] xl:hidden! hover:text-base-700 dark:hover:text-base-200"
+        x-on:click="sidebarMobileOpen = !sidebarMobileOpen">
+        close
+    </span>
+</div>

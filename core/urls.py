@@ -23,4 +23,5 @@ urlpatterns = [
     # ── Ações AJAX ─────────────────────────────────────────────────────────
     path("colecao/toggle/<int:issue_id>/", views.toggle_collection, name="toggle_collection"),
     path("lido/toggle/<int:issue_id>/",    views.toggle_read,       name="toggle_read"),
+    path("formato/toggle/<int:issue_id>/", views.toggle_format,     name="toggle_format"),
 ]

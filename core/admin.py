@@ -168,9 +168,9 @@ class IssueAdmin(IssueSearchMixin, ModelAdmin):
 
 @admin.register(CollectionItem)
 class CollectionItemAdmin(ModelAdmin):
-    list_display = ("issue", "user", "added_date", "is_digital")
+    list_display = ("issue", "user", "added_date", "has_physical", "has_digital")
     search_fields = ("issue__name", "issue__title__name")
-    list_filter = ("is_digital", "user", "issue__title__type")
+    list_filter = ("has_physical", "has_digital", "user", "issue__title__type")
 
 
 @admin.register(ReadItem)
