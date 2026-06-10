@@ -678,3 +678,110 @@
 .action-pill--digital.is-active:hover {
     background: rgba(147, 51, 234, .6);
 }
+
+.btn-sortear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+    border: 1px solid var(--accent);
+    text-decoration: none;
+    transition: background var(--transition), color var(--transition);
+}
+
+.btn-sortear:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* ── Title Detail ───────────────────────────────────────────────────────── */
+.title-header {
+    margin-bottom: 24px;
+}
+
+.title-name {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    letter-spacing: .03em;
+    margin-bottom: 4px;
+}
+
+.title-meta {
+    font-size: .85rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.title-count {
+    font-size: .85rem;
+    color: var(--text-muted);
+}
+
+.title-count strong {
+    color: var(--text);
+}
+
+/* Botões de ação da topbar */
+.btn-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+    border: 1px solid var(--accent);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition);
+}
+
+.btn-action:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+.btn-action--danger {
+    background: var(--red-soft);
+    color: var(--red);
+    border-color: var(--red);
+}
+
+.btn-action--danger:hover {
+    background: var(--red);
+    color: #fff;
+}
+
+.btn-action--active {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* Badge de estimada */
+.estimated-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: #00000088;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffcc00;
+}
+
+.estimated-badge .material-symbols-outlined {
+    font-size: 14px;
+}
+
+/* Card estimado — leve opacidade */
+.issue-card.is-estimated {
+    opacity: 0.75;
+}

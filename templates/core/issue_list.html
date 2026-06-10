@@ -12,7 +12,14 @@
 <div class="bg-white border-b border-base-200 dark:bg-base-900 dark:border-base-800 px-4 mb-6 z-40">
     <div class="container mx-auto flex items-center h-16 gap-4">
         <h1 class="slj-page-title">{{ type_label }}</h1>
-        <div class="ml-auto">
+        <div class="ml-auto flex items-center gap-3">
+
+            {% if type_id == 2 %}
+            <a href="{% url 'sortear_livro' %}" class="btn-sortear" title="Sortear um livro">
+                <span class="material-symbols-outlined">auto_awesome</span>
+            </a>
+            {% endif %}
+
             <form method="get" class="search-form" id="searchForm">
                 <div class="search-wrap">
                     <span class="material-symbols-outlined search-icon">search</span>
@@ -25,6 +32,7 @@
                     {% endif %}
                 </div>
             </form>
+
         </div>
     </div>
 </div>

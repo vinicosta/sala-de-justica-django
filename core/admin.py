@@ -1,5 +1,7 @@
 # core/admin.py
 
+import re
+
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.db.models import Q
@@ -19,6 +21,8 @@ from .models import (
     Title,
     Type,
 )
+
+from .gap_detection import fill_gaps
 
 
 # ── Inlines ──────────────────────────────────────────────────────────────────
@@ -162,6 +166,13 @@ class IssueAdmin(IssueSearchMixin, ModelAdmin):
 
     # Garante que o filtro por tipo (vindo do link do menu) funcione corretamente.
     # O parâmetro title__type__id__exact é reconhecido pelo list_filter acima.
+
+    # Sobrescreve save_model para rodar gap detection após salvar uma edição.
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        # Só roda gap detection se issue_number for numérico
+        if obj.issue_number and re.match(r'^\d+', obj.issue_number.strip()):
+            fill_gaps(obj.title)
 
 
 # ── Usuário ───────────────────────────────────────────────────────────────────

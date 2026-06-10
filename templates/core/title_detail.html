@@ -1,0 +1,172 @@
+{# templates/core/title_detail.html #}
+{% extends "unfold/layouts/base_simple.html" %}
+{% load static i18n %}
+
+{% block title %}{{ title.name }} — Sala de Justiça{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'core/app.css' %}">
+{% endblock %}
+
+{% block content_before %}
+<div class="bg-white border-b border-base-200 dark:bg-base-900 dark:border-base-800 px-4 mb-6 z-40">
+    <div class="container mx-auto flex items-center h-16 gap-4">
+        <a href="/{{ slug }}/" class="text-muted hover:text-primary flex items-center gap-1"
+            style="color:var(--un-text-muted);text-decoration:none;font-size:.85rem;">
+            <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
+            {{ type_label }}
+        </a>
+        <div class="ml-auto flex items-center gap-2">
+            {# Nova edição #}
+            <a href="/admin/core/issue/add/?title={{ title.pk }}" class="btn-action" title="Nova edição">
+                <span class="material-symbols-outlined">add</span>
+            </a>
+            {# Editar título #}
+            <a href="/admin/core/title/{{ title.pk }}/change/" class="btn-action" title="Editar título">
+                <span class="material-symbols-outlined">edit</span>
+            </a>
+            {# Excluir título #}
+            <a href="/admin/core/title/{{ title.pk }}/delete/" class="btn-action btn-action--danger"
+                title="Excluir título">
+                <span class="material-symbols-outlined">delete</span>
+            </a>
+            {# Toggle lista de leitura #}
+            <button class="btn-action {% if in_reading_list %}btn-action--active{% endif %}" id="btnReadingList"
+                title="Lista de leitura" onclick="toggleReadingList({{ title.pk }})">
+                <span class="material-symbols-outlined">
+                    {% if in_reading_list %}bookmark_added{% else %}bookmark_add{% endif %}
+                </span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{# ── Header do título ── #}
+<div class="title-header">
+    <h1 class="title-name">{{ title.name }}</h1>
+    <p class="title-meta">
+        {% if title.publisher %}{{ title.publisher.name }}{% endif %}
+        {% if title.genre %} · {{ title.genre.name }}{% endif %}
+        {% if title.subgenre %} · {{ title.subgenre.name }}{% endif %}
+        {% if title.periodicity %} · {{ title.periodicity.name }}{% endif %}
+        {% if title.format %} · {{ title.format.name }}{% endif %}
+    </p>
+    <p class="title-count">
+        <strong>{{ total }}</strong> edição{{ total|pluralize:",ões" }}
+    </p>
+</div>
+
+{# ── Grid de edições ── #}
+{% if issues %}
+<div class="issue-grid">
+    {% for issue in issues %}
+    <article class="issue-card {% if issue.is_estimated %}is-estimated{% endif %}" data-issue-id="{{ issue.pk }}"
+        data-in-collection="{% if issue.pk in collected_ids %}true{% else %}false{% endif %}"
+        data-is-read="{% if issue.pk in read_ids %}true{% else %}false{% endif %}" onclick="goToDetail({{ issue.pk }})">
+
+        <div class="card-cover-wrap">
+            {% if issue.image %}
+            <img src="{{ issue.image.url }}" alt="{{ issue.name }}" class="card-cover" loading="lazy" />
+            {% else %}
+            <div class="card-cover card-cover--placeholder">
+                <span class="material-symbols-outlined">image_not_supported</span>
+            </div>
+            {% endif %}
+
+            {% if issue.is_estimated %}
+            <div class="estimated-badge" title="Data estimada">
+                <span class="material-symbols-outlined">schedule</span>
+            </div>
+            {% endif %}
+
+            <div class="card-actions">
+                <button class="action-btn collection-btn" title="Coleção" onclick="handleCollection(event, this)">
+                    <span class="material-symbols-outlined btn-icon"></span>
+                    <span class="btn-label"></span>
+                </button>
+                <button class="action-btn read-btn" title="Lido" onclick="handleRead(event, this)">
+                    <span class="material-symbols-outlined btn-icon"></span>
+                    <span class="btn-label"></span>
+                </button>
+            </div>
+        </div>
+
+        <div class="card-info">
+            {% if type_id == 2 %}
+            <p class="card-title">{{ issue.name }}</p>
+            {% if issue.issue_number %}
+            <p class="card-subtitle">vol. {{ issue.issue_number }}</p>
+            {% endif %}
+            {% else %}
+            <p class="card-title">
+                {% if issue.issue_number %}
+                <span class="card-number">#{{ issue.issue_number }}</span>
+                {% endif %}
+                {{ issue.name }}
+            </p>
+            {% endif %}
+            <p class="card-meta">
+                {% if issue.date_publication %}
+                {{ issue.date_publication|date:"M/Y" }}
+                {% if issue.is_estimated %}<em>(est.)</em>{% endif %}
+                {% endif %}
+            </p>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+    <span class="material-symbols-outlined empty-icon">menu_book</span>
+    <p>Nenhuma edição cadastrada ainda.</p>
+</div>
+{% endif %}
+
+{# Modal de confirmação #}
+<div class="modal-backdrop" id="confirmModal" style="display:none">
+    <div class="modal">
+        <p class="modal-msg" id="confirmMsg"></p>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+            <button class="btn btn-danger" id="confirmBtn">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extrahead %}
+<script>
+    const TOGGLE_COLLECTION_URL = "{% url 'toggle_collection' 0 %}".replace("/0/", "/");
+    const TOGGLE_READ_URL = "{% url 'toggle_read' 0 %}".replace("/0/", "/");
+    const TOGGLE_READING_LIST_URL = "{% url 'toggle_reading_list' 0 %}".replace("/0/", "/");
+    const CSRF_TOKEN = "{{ csrf_token }}";
+    const TYPE_SLUG = "{{ slug }}";
+
+    function goToDetail(issueId) {
+        window.location.href = "/" + TYPE_SLUG + "/" + issueId + "/";
+    }
+
+    async function toggleReadingList(titleId) {
+        const btn = document.getElementById("btnReadingList");
+        const icon = btn.querySelector(".material-symbols-outlined");
+        const res = await fetch(TOGGLE_READING_LIST_URL + titleId + "/", {
+            method: "POST",
+            headers: { "X-CSRFToken": CSRF_TOKEN, "Content-Type": "application/json" },
+        });
+        const data = await res.json();
+        if (data.status === "added") {
+            btn.classList.add("btn-action--active");
+            icon.textContent = "bookmark_added";
+        } else {
+            btn.classList.remove("btn-action--active");
+            icon.textContent = "bookmark_add";
+        }
+    }
+</script>
+<script src="{% static 'core/app.js' %}"></script>
+{% endblock %}

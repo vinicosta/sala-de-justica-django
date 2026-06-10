@@ -4,3 +4,4 @@ django-unfold>=0.83
 python-dotenv
 Pillow
 pymysql==1.1.1
+python-dateutil>=2.9

@@ -1,15 +1,15 @@
 # core/views.py
 
-import json
+import json, random
 from django.contrib.admin import site as admin_site
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_POST
 
 from .models import CollectionItem, Issue, ReadItem, ReadingList, Title
-
+from .gap_detection import fill_gaps
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -198,6 +198,51 @@ def issue_detail(request, type_id: int, type_label: str, issue_id: int):
     })
     return render(request, "core/issue_detail.html", context)
 
+@login_required
+def title_detail(request, title_id: int, type_id: int, type_label: str, slug: str):
+    title = get_object_or_404(Title, pk=title_id, type_id=type_id)
+    user = request.user
+
+    issues = (
+        Issue.objects.filter(title=title)
+        .prefetch_related("authors")
+        .order_by("-date_publication", "-id")
+    )
+
+    collected_ids = set(
+        CollectionItem.objects.filter(user=user).values_list("issue_id", flat=True)
+    )
+    read_ids = set(
+        ReadItem.objects.filter(user=user).values_list("issue_id", flat=True)
+    )
+    in_reading_list = ReadingList.objects.filter(user=user, title=title).exists()
+
+    context = _admin_context(request)
+    context.update({
+        "title":           title,
+        "type_label":      type_label,
+        "type_id":         type_id,
+        "slug":            slug,
+        "issues":          issues,
+        "total":           issues.count(),
+        "collected_ids":   collected_ids,
+        "read_ids":        read_ids,
+        "in_reading_list": in_reading_list,
+    })
+    return render(request, "core/title_detail.html", context)
+
+
+@login_required
+@require_POST
+def toggle_reading_list(request, title_id: int):
+    title = get_object_or_404(Title, pk=title_id)
+    user = request.user
+    item, created = ReadingList.objects.get_or_create(title=title, user=user)
+    if not created:
+        item.delete()
+        return JsonResponse({"status": "removed"})
+    return JsonResponse({"status": "added"})
+
 
 # ── Ações AJAX ────────────────────────────────────────────────────────────────
 
@@ -271,3 +316,12 @@ def toggle_read(request, issue_id: int):
         return JsonResponse({"status": "confirm_needed"})
 
     return JsonResponse({"status": "added"})
+
+@login_required
+def sortear_livro(request):
+    user = request.user
+    next_ids = _next_issues_for_user(user, type_id=2)
+    if not next_ids:
+        return redirect("livros")
+    escolhido = random.choice(next_ids)
+    return redirect("livros_detail", issue_id=escolhido)
