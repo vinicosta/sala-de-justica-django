@@ -23,7 +23,8 @@
             <form method="get" class="search-form" id="searchForm">
                 <div class="search-wrap">
                     <span class="material-symbols-outlined search-icon">search</span>
-                    <input type="search" name="q" value="{{ q }}" placeholder='Pesquisar… ex: "batman #34"'
+                    <input type="search" name="q" value="{{ q }}"
+                        placeholder='{% if type_id == 2 %}Pesquisar{% else %}Pesquisar: "batman #34"{% endif %}'
                         class="search-input" autocomplete="off" id="searchInput" />
                     {% if q %}
                     <a href="?" class="search-clear" title="Limpar">
@@ -40,19 +41,72 @@
 
 {% block content %}
 <div class="list-meta">
-    Lista de leitura —
-    <strong>{{ total }}</strong> {{ type_label|lower }}
-    {% if q %}<span class="search-tag">« {{ q }} »</span>{% endif %}
+    {% if is_search %}
+    {% if is_title_search %}
+    Títulos encontrados — <strong>{{ total }}</strong>
+    {% if total == 1 %}título{% else %}títulos{% endif %}
+    para <span class="search-tag">{{ q }}</span>
+    {% else %}
+    Acervo — <strong>{{ total }}</strong>
+    {% if total == 1 %}resultado{% else %}resultados{% endif %}
+    para <span class="search-tag">{{ q }}</span>
+    {% endif %}
+    {% else %}
+    Lista de leitura — <strong>{{ total }}</strong>
+    {% if total == 1 %}edição{% else %}edições{% endif %}
+    {{ type_label|lower }}
+    {% endif %}
 </div>
 
 {% if issues %}
 <div class="issue-grid">
     {% for issue in issues %}
+
+    {% if is_title_search %}
+    {# ── Card de título: capa mais recente, sem toggles, link para title_detail ── #}
+    <article class="issue-card issue-card--title"
+        onclick="window.location.href='/{{ slug }}/titulo/{{ issue.title.pk }}/'">
+
+        <div class="card-cover-wrap">
+            {% if issue.pk in read_ids %}
+            <div class="card-read-badge" title="Lido"></div>
+            {% endif %}
+            {% if issue.pk in collected_ids %}
+            <div class="card-collection-badge" title="Na coleção"></div>
+            {% endif %}
+
+            {% if issue.image %}
+            <img src="{{ issue.image.url }}" alt="{{ issue.title.name }}" class="card-cover" loading="lazy" />
+            {% else %}
+            <div class="card-cover card-cover--placeholder">
+                <span class="material-symbols-outlined">image_not_supported</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card-info">
+            <p class="card-title">{{ issue.title.name }}</p>
+            <p class="card-meta">
+                {% if issue.title.publisher %}{{ issue.title.publisher.name }}{% endif %}
+                {% if issue.date_publication %} · {{ issue.date_publication|date:"Y" }}{% endif %}
+            </p>
+        </div>
+    </article>
+
+    {% else %}
+    {# ── Card normal: edição com toggles ── #}
     <article class="issue-card" data-issue-id="{{ issue.pk }}"
         data-in-collection="{% if issue.pk in collected_ids %}true{% else %}false{% endif %}"
         data-is-read="{% if issue.pk in read_ids %}true{% else %}false{% endif %}" onclick="goToDetail({{ issue.pk }})">
 
         <div class="card-cover-wrap">
+            {% if issue.pk in read_ids %}
+            <div class="card-read-badge" title="Lido"></div>
+            {% endif %}
+            {% if issue.pk in collected_ids %}
+            <div class="card-collection-badge" title="Na coleção"></div>
+            {% endif %}
+            
             {% if issue.image %}
             <img src="{{ issue.image.url }}" alt="{{ issue.name }}" class="card-cover" loading="lazy" />
             {% else %}
@@ -105,13 +159,23 @@
             {% endif %}
         </div>
     </article>
+    {% endif %}
+
     {% endfor %}
 </div>
 
 {% else %}
 <div class="empty-state">
-    <span class="material-symbols-outlined empty-icon">search_off</span>
-    <p>Nenhuma edição encontrada{% if q %} para "{{ q }}"{% endif %}.</p>
+    <span class="material-symbols-outlined empty-icon">
+        {% if is_search %}search_off{% else %}menu_book{% endif %}
+    </span>
+    <p>
+        {% if is_search %}
+        Nenhum resultado para "{{ q }}".
+        {% else %}
+        Nenhuma edição na lista de leitura.
+        {% endif %}
+    </p>
 </div>
 {% endif %}
 

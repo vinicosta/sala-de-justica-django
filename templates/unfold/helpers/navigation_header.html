@@ -7,7 +7,9 @@
         {% else %}
         <img src="{% static 'core/favicon.png' %}" alt="SLJ" class="h-8 w-8 rounded-lg flex-shrink-0" />
         <span class="truncate text-font-default-light dark:text-font-default-dark">
-            {{ site_title }}
+            <a href="/admin/" style="text-decoration:none;color:inherit;">
+                {{ site_title }}
+            </a>
         </span>
         {% endif %}
     </div>

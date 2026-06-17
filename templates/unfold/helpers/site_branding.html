@@ -1,10 +1,6 @@
 {% load i18n %}
 <div id="site-name">
-    {% if site_dropdown %}
-    Sala de Justiça / App
-    {% else %}
-    <a href="{% url 'admin:index' %}">
+    <a href="/admin/" style="text-decoration:none;color:inherit;">
         Sala de Justiça / App
     </a>
-    {% endif %}
 </div>

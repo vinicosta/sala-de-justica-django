@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     # Apps locais
     "core",
 ]
@@ -103,30 +104,31 @@ UNFOLD = {
     "SITE_ICON": lambda request: static("core/favicon.png"),
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": False,
-    "THEME": "dark",
+    "THEME": None,
+    "SHOW_THEME_SWITCHER": True,
     "DASHBOARD_CALLBACK": "core.dashboard.dashboard_callback",
     "COLORS": {
         "primary": {
-            "50":  "250 245 255",
-            "100": "243 232 255",
-            "200": "233 213 255",
-            "300": "216 180 254",
-            "400": "192 132 252",
-            "500": "168 85 247",
-            "600": "147 51 234",
-            "700": "126 34 206",
-            "800": "107 33 168",
-            "900": "88 28 135",
-            "950": "59 7 100",
+            "50":  "239 246 255",
+            "100": "219 234 254",
+            "200": "191 219 254",
+            "300": "147 197 253",
+            "400": "96 165 250",
+            "500": "55 138 221",
+            "600": "37 99 185",
+            "700": "29 78 157",
+            "800": "30 64 130",
+            "900": "23 48 107",
+            "950": "15 30 75",
         },
     },
     "SIDEBAR": {
-        "show_search": True,
+        "show_search": False,
         "show_all_applications": False,
         "navigation": [
             {
                 "title": "Acervo",
-                "separator": True,
+                "separator": False,
                 "items": [
                     {
                         "title": "Quadrinhos",

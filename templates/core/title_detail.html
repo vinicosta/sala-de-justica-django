@@ -55,7 +55,7 @@
         {% if title.format %} · {{ title.format.name }}{% endif %}
     </p>
     <p class="title-count">
-        <strong>{{ total }}</strong> edição{{ total|pluralize:",ões" }}
+        <strong>{{ total }}</strong> edi{% if total == 1 %}ção{% else %}ções{% endif %}
     </p>
 </div>
 
@@ -68,6 +68,12 @@
         data-is-read="{% if issue.pk in read_ids %}true{% else %}false{% endif %}" onclick="goToDetail({{ issue.pk }})">
 
         <div class="card-cover-wrap">
+            {% if issue.pk in read_ids %}
+            <div class="card-read-badge" title="Lido"></div>
+            {% endif %}
+            {% if issue.pk in collected_ids %}
+            <div class="card-collection-badge" title="Na coleção"></div>
+            {% endif %}
             {% if issue.image %}
             <img src="{{ issue.image.url }}" alt="{{ issue.name }}" class="card-cover" loading="lazy" />
             {% else %}
@@ -146,6 +152,7 @@
     const TOGGLE_READING_LIST_URL = "{% url 'toggle_reading_list' 0 %}".replace("/0/", "/");
     const CSRF_TOKEN = "{{ csrf_token }}";
     const TYPE_SLUG = "{{ slug }}";
+    const TITLE_DETAIL_MODE = true;
 
     function goToDetail(issueId) {
         window.location.href = "/" + TYPE_SLUG + "/" + issueId + "/";
