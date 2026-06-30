@@ -1,0 +1,306 @@
+{# templates/core/issue_form.html #}
+{% extends "core/base_app.html" %}
+{% load static %}
+
+{% block title %}Nova edição — {{ type_label }} — Sala de Justiça{% endblock %}
+
+{% block nav_quadrinhos %}{% if type_id == 1 %}active{% endif %}{% endblock %}
+{% block nav_livros %}{% if type_id == 2 %}active{% endif %}{% endblock %}
+{% block nav_revistas %}{% if type_id == 3 %}active{% endif %}{% endblock %}
+
+{% block page_title %}Nova edição — {{ type_label }}{% endblock %}
+
+{% block top_bar_actions %}
+{% if type_id == 1 %}{% url 'quadrinhos' as back_url %}
+{% elif type_id == 2 %}{% url 'livros' as back_url %}
+{% else %}{% url 'revistas' as back_url %}{% endif %}
+<a href="{{ back_url }}" class="slj-btn-back">
+    <span class="material-symbols-outlined">arrow_back</span>
+    Voltar
+</a>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+<div class="slj-messages">
+    {% for msg in messages %}
+    <div class="slj-message slj-message--{{ msg.tags }}">
+        <span class="material-symbols-outlined">check_circle</span>{{ msg }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="slj-form-wrap">
+    <form method="post" class="slj-form" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="title_id" value="{{ title_id }}">
+        {{ form.cover_path }}
+
+        {# ── Datalists para autocomplete ── #}
+        <datalist id="list-publishers">
+            {% for p in publishers %}<option value="{{ p }}">{% endfor %}
+        </datalist>
+        <datalist id="list-periodicities">
+            {% for p in periodicities %}<option value="{{ p }}">{% endfor %}
+        </datalist>
+        <datalist id="list-formats">
+            {% for f in formats %}<option value="{{ f }}">{% endfor %}
+        </datalist>
+        <datalist id="list-subgenres">
+            {% for s in subgenres %}<option value="{{ s }}">{% endfor %}
+        </datalist>
+
+        {# ════════════════════════════════════════════════════════════════════ #}
+        {# SEÇÃO 1 — Título (só no form completo) #}
+        {# ════════════════════════════════════════════════════════════════════ #}
+        {% if not is_compact %}
+        <section class="slj-form-section">
+            <h2 class="slj-form-section-title">Título</h2>
+
+            <div class="slj-field">
+                <label class="slj-label">Nome do título <span class="slj-required">*</span></label>
+                {{ form.title_name }}
+                {% if form.title_name.errors %}<p class="slj-field-error">{{ form.title_name.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="slj-field-row slj-field-row--2">
+                <div class="slj-field">
+                    <label class="slj-label">Editora</label>
+                    {{ form.publisher_name }}
+                </div>
+                <div class="slj-field">
+                    <label class="slj-label">Periodicidade</label>
+                    {{ form.periodicity_name }}
+                </div>
+            </div>
+
+            <div class="slj-field-row slj-field-row--2">
+                <div class="slj-field">
+                    <label class="slj-label">Formato</label>
+                    {{ form.format_name }}
+                </div>
+                <div class="slj-field">
+                    <label class="slj-label">Subgênero</label>
+                    {{ form.subgenre_name }}
+                </div>
+            </div>
+        </section>
+        {% else %}
+        {# Form compacto: mostra info do título como leitura #}
+        <div class="slj-title-badge">
+            <span class="material-symbols-outlined">collections_bookmark</span>
+            <div>
+                <p class="slj-title-badge-name">{{ title.name }}</p>
+                <p class="slj-title-badge-meta">
+                    {% if title.publisher %}{{ title.publisher.name }}{% endif %}
+                    {% if title.periodicity %} · {{ title.periodicity.name }}{% endif %}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ════════════════════════════════════════════════════════════════════ #}
+        {# SEÇÃO 2 — Edição #}
+        {# ════════════════════════════════════════════════════════════════════ #}
+        <section class="slj-form-section">
+            <h2 class="slj-form-section-title">Edição</h2>
+
+            <div class="slj-field">
+                <label class="slj-label">Nome da edição <span class="slj-required">*</span></label>
+                {{ form.name }}
+                {% if form.name.errors %}<p class="slj-field-error">{{ form.name.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="slj-field">
+                <label class="slj-label">Subtítulo</label>
+                {{ form.subtitle }}
+            </div>
+
+            <div class="slj-field-row slj-field-row--3">
+                <div class="slj-field">
+                    <label class="slj-label">Nº da edição</label>
+                    {{ form.issue_number }}
+                </div>
+                <div class="slj-field">
+                    <label class="slj-label">Mês</label>
+                    {{ form.pub_month }}
+                </div>
+                <div class="slj-field">
+                    <label class="slj-label">Ano</label>
+                    {{ form.pub_year }}
+                </div>
+            </div>
+
+            <div class="slj-field-row slj-field-row--2">
+                <div class="slj-field">
+                    <label class="slj-label">Nº de páginas</label>
+                    {{ form.number_pages }}
+                </div>
+                {% if show_isbn %}
+                <div class="slj-field">
+                    <label class="slj-label">ISBN</label>
+                    {{ form.isbn }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="slj-field">
+                <label class="slj-label">Sinopse</label>
+                {{ form.synopsis }}
+            </div>
+        </section>
+
+        {# ════════════════════════════════════════════════════════════════════ #}
+        {# SEÇÃO 3 — Capa #}
+        {# ════════════════════════════════════════════════════════════════════ #}
+        <section class="slj-form-section">
+            <h2 class="slj-form-section-title">Capa</h2>
+
+            <div class="slj-cover-upload">
+                {# Área de preview #}
+                <div class="slj-cover-preview" id="coverPreview">
+                    <div class="slj-cover-placeholder" id="coverPlaceholder">
+                        <span class="material-symbols-outlined">add_photo_alternate</span>
+                        <span>Escolher capa</span>
+                    </div>
+                    <img src="" alt="Preview da capa" class="slj-cover-img" id="coverImg" style="display:none">
+                    <div class="slj-cover-overlay" id="coverOverlay" style="display:none">
+                        <div class="slj-cover-spinner"></div>
+                    </div>
+                    <div class="slj-cover-done" id="coverDone" style="display:none">
+                        <span class="material-symbols-outlined">check_circle</span>
+                    </div>
+                </div>
+
+                {# Input real, escondido #}
+                <input type="file" id="coverFileInput" accept="image/*" style="display:none">
+
+                <div class="slj-cover-actions">
+                    <button type="button" class="slj-btn-choose-cover" id="btnChooseCover">
+                        <span class="material-symbols-outlined">upload</span>
+                        Escolher imagem
+                    </button>
+                    <button type="button" class="slj-btn-remove-cover" id="btnRemoveCover" style="display:none">
+                        <span class="material-symbols-outlined">delete</span>
+                        Remover
+                    </button>
+                    <p class="slj-cover-hint">JPG, PNG ou WebP · máx. 5 MB</p>
+                </div>
+            </div>
+        </section>
+
+        {# ── Ações ── #}
+        <div class="slj-form-actions">
+            <a href="{{ back_url|default:'/' }}" class="btn btn-ghost">Cancelar</a>
+            <button type="submit" class="slj-btn-submit" id="submitBtn">
+                <span class="material-symbols-outlined">save</span>
+                Salvar edição
+            </button>
+        </div>
+
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const UPLOAD_COVER_URL = "{% url 'upload_cover' %}";
+    const CSRF_TOKEN = "{{ csrf_token }}";
+
+    (function () {
+        const fileInput = document.getElementById("coverFileInput");
+        const btnChoose = document.getElementById("btnChooseCover");
+        const btnRemove = document.getElementById("btnRemoveCover");
+        const preview = document.getElementById("coverPreview");
+        const placeholder = document.getElementById("coverPlaceholder");
+        const img = document.getElementById("coverImg");
+        const overlay = document.getElementById("coverOverlay");
+        const done = document.getElementById("coverDone");
+        const coverPath = document.querySelector('input[name="cover_path"]');
+        const submitBtn = document.getElementById("submitBtn");
+
+        // Abre o seletor de arquivo
+        btnChoose.addEventListener("click", () => fileInput.click());
+
+        // Também clica na área de preview se não tiver imagem
+        preview.addEventListener("click", () => {
+            if (!img.src || img.style.display === "none") fileInput.click();
+        });
+
+        fileInput.addEventListener("change", async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            // Valida tamanho (5 MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Arquivo muito grande. Máximo 5 MB.");
+                fileInput.value = "";
+                return;
+            }
+
+            // 1. Mostra preview local imediatamente + overlay de loading
+            const localUrl = URL.createObjectURL(file);
+            img.src = localUrl;
+            img.style.display = "block";
+            placeholder.style.display = "none";
+            overlay.style.display = "flex";
+            done.style.display = "none";
+            preview.classList.add("slj-cover-loading");
+            submitBtn.disabled = true;
+            btnChoose.style.display = "none";
+            btnRemove.style.display = "none";
+
+            // 2. Faz upload para o servidor
+            try {
+                const formData = new FormData();
+                formData.append("cover", file);
+                formData.append("csrfmiddlewaretoken", CSRF_TOKEN);
+
+                const res = await fetch(UPLOAD_COVER_URL, { method: "POST", body: formData });
+                const data = await res.json();
+
+                if (data.path) {
+                    // 3. Upload OK — remove overlay, mostra ✓
+                    coverPath.value = data.path;
+                    overlay.style.display = "none";
+                    done.style.display = "flex";
+                    preview.classList.remove("slj-cover-loading");
+                    preview.classList.add("slj-cover-ready");
+                    submitBtn.disabled = false;
+                    btnRemove.style.display = "flex";
+
+                    // ✓ some após 2s
+                    setTimeout(() => { done.style.display = "none"; }, 2000);
+                } else {
+                    throw new Error(data.error || "Erro no upload.");
+                }
+            } catch (err) {
+                // Upload falhou — remove preview e avisa
+                resetCover();
+                alert("Erro ao enviar a imagem: " + err.message);
+            }
+        });
+
+        btnRemove.addEventListener("click", () => {
+            resetCover();
+        });
+
+        function resetCover() {
+            fileInput.value = "";
+            coverPath.value = "";
+            img.src = "";
+            img.style.display = "none";
+            placeholder.style.display = "flex";
+            overlay.style.display = "none";
+            done.style.display = "none";
+            preview.classList.remove("slj-cover-loading", "slj-cover-ready");
+            submitBtn.disabled = false;
+            btnChoose.style.display = "flex";
+            btnRemove.style.display = "none";
+        }
+    })();
+</script>
+{% endblock %}

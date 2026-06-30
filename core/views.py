@@ -1,17 +1,23 @@
 # core/views.py
 
 import json, random, unicodedata, re
-from django.contrib.postgres.search import SearchVector
-from django.db.models.functions import Upper
+from datetime import date
+
 from django.contrib.admin import site as admin_site
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Max
+from django.core.files.storage import default_storage
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_POST
 
-from .models import CollectionItem, Issue, ReadItem, ReadingList, Title
+from .forms import IssueCompactForm, IssueFullForm
+from .models import (
+    CollectionItem, Format, Issue, Periodicity,
+    Publisher, ReadItem, ReadingList, Subgenre, Title,
+)
 from .gap_detection import fill_gaps
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -36,7 +42,6 @@ def _admin_context(request: object) -> dict:
 
 
 def _normalize(text: str) -> str:
-    """Remove acentos e caracteres especiais para busca insensível a diacríticos."""
     nfkd = unicodedata.normalize("NFKD", text)
     ascii_str = nfkd.encode("ascii", "ignore").decode("ascii")
     return ascii_str.lower()
@@ -117,47 +122,20 @@ def _get_next_issue_data(user, current_issue) -> dict | None:
 
 
 def _icontains_normalized(field: str, q: str) -> Q:
-    """
-    Busca insensível a acentos usando unaccent do PostgreSQL.
-    Requer: extensão unaccent no banco + django.contrib.postgres no INSTALLED_APPS.
-    Fallback: busca dupla (com e sem acento normalizado via Python).
-    """
     q_norm = _normalize(q)
     try:
         from django.contrib.postgres.lookups import Unaccent
-        # unaccent__icontains: remove acentos de ambos os lados antes de comparar
-        return (
-            Q(**{f"{field}__unaccent__icontains": q})
-        )
+        return Q(**{f"{field}__unaccent__icontains": q})
     except Exception:
-        # Fallback sem unaccent
         if q_norm == q.lower():
             return Q(**{f"{field}__icontains": q})
         return Q(**{f"{field}__icontains": q}) | Q(**{f"{field}__icontains": q_norm})
 
 
 def _search_issues(q: str, type_id: int, user):
-    """
-    Busca no acervo.
-
-    QUADRINHOS / REVISTAS (type_id 1 ou 3):
-      - Com '#'  → busca edições por título + número. Retorna issues ordenadas
-                   por data DESC (mais recentes primeiro).
-      - Sem '#'  → busca títulos por nome ou editora. Retorna um card por
-                   título: capa da edição mais recente, link para title_detail.
-                   Cards sem toggles de coleção/lido.
-
-    LIVROS (type_id 2):
-      - Sempre busca edições (sem sintaxe #).
-      - Campos: nome da edição, nome do título, editora, autor.
-      - Ordem alfabética pelo nome da edição.
-    """
     if not q:
-        return [], False  # (resultados, is_title_search)
+        return [], False
 
-    q_norm = _normalize(q)
-
-    # ── LIVROS: busca sempre por edição ──────────────────────────────────────
     if type_id == 2:
         filters = (
             _icontains_normalized("name", q)
@@ -170,24 +148,18 @@ def _search_issues(q: str, type_id: int, user):
             .filter(Q(title__type_id=type_id) & filters)
             .select_related("title", "title__publisher", "title__type")
             .prefetch_related("authors")
-            # Ordena por título primeiro (agrupa a série), depois por volume crescente
             .order_by("title__name", "issue_number", "name")
             .distinct()
         )
-        return issues, False  # is_title_search=False → mostra toggles
-
-    # ── QUADRINHOS / REVISTAS ────────────────────────────────────────────────
+        return issues, False
 
     if "#" in q:
-        # Busca por edição específica
         parts       = q.split("#", 1)
         title_part  = parts[0].strip()
         number_part = parts[1].strip()
         filters = Q(title__type_id=type_id)
         if title_part:
-            filters &= (
-                _icontains_normalized("title__name", title_part)
-            )
+            filters &= _icontains_normalized("title__name", title_part)
         if number_part:
             filters &= Q(issue_number__icontains=number_part)
         issues = list(
@@ -198,9 +170,8 @@ def _search_issues(q: str, type_id: int, user):
             .order_by("-date_publication", "title__name", "issue_number")
             .distinct()
         )
-        return issues, False  # is_title_search=False → mostra toggles
+        return issues, False
 
-    # Busca por título — retorna um card por título
     title_filters = (
         Q(type_id=type_id) & _icontains_normalized("name", q)
     ) | (
@@ -214,7 +185,6 @@ def _search_issues(q: str, type_id: int, user):
         .order_by("name")
     )
 
-    # Para cada título, pega a edição mais recente para usar como capa
     results = []
     for title in titles:
         latest_issue = (
@@ -227,7 +197,63 @@ def _search_issues(q: str, type_id: int, user):
         if latest_issue:
             results.append(latest_issue)
 
-    return results, True  # is_title_search=True → sem toggles, link para title_detail
+    return results, True
+
+
+def _build_date(month: str, year) -> date | None:
+    if month and year:
+        try:
+            return date(int(year), int(month), 1)
+        except (ValueError, TypeError):
+            pass
+    return None
+
+
+def _resolve_fk(model, name_field: str, value: str):
+    if not value or not value.strip():
+        return None
+    return model.objects.filter(**{f"{name_field}__iexact": value.strip()}).first()
+
+
+def _next_issue_defaults(title: Title) -> dict:
+    from dateutil.relativedelta import relativedelta
+
+    last = (
+        Issue.objects
+        .filter(title=title, is_estimated=False)
+        .exclude(date_publication=None)
+        .order_by("-date_publication", "-issue_number")
+        .first()
+    )
+
+    defaults = {"name": title.name}
+
+    if last and last.issue_number:
+        try:
+            m = re.match(r"(\d+)", last.issue_number)
+            if m:
+                defaults["issue_number"] = str(int(m.group(1)) + 1)
+        except (ValueError, AttributeError):
+            pass
+
+    if last and last.date_publication and title.periodicity:
+        p = title.periodicity
+        delta_map = {
+            "day":   relativedelta(days=p.date_interval_number),
+            "week":  relativedelta(weeks=p.date_interval_number),
+            "month": relativedelta(months=p.date_interval_number),
+            "year":  relativedelta(years=p.date_interval_number),
+        }
+        delta = delta_map.get(p.date_interval)
+        if delta:
+            next_date = last.date_publication + delta
+            defaults["pub_month"] = next_date.strftime("%m")
+            defaults["pub_year"]  = next_date.year
+    elif last and last.date_publication:
+        defaults["pub_month"] = last.date_publication.strftime("%m")
+        defaults["pub_year"]  = last.date_publication.year
+
+    return defaults
 
 
 # ── Views ─────────────────────────────────────────────────────────────────────
@@ -369,6 +395,115 @@ def title_detail(request, title_id: int, type_id: int, type_label: str, slug: st
 
 
 @login_required
+def issue_create(request, type_id: int, type_label: str):
+    """
+    Form híbrido:
+    - ?title_id=X  → form compacto (title já existe, valores pré-calculados)
+    - sem title_id → form completo (cria title + issue juntos)
+    """
+    slug      = _type_slug(type_id)
+    title_id  = request.GET.get("title_id") or request.POST.get("title_id")
+    title     = None
+    is_compact = False
+
+    if title_id:
+        title      = get_object_or_404(Title, pk=title_id, type_id=type_id)
+        is_compact = True
+
+    # Datalists para autocomplete
+    publishers    = list(Publisher.objects.order_by("name").values_list("name", flat=True))
+    periodicities = list(Periodicity.objects.order_by("name").values_list("name", flat=True))
+    formats       = list(Format.objects.filter(type_id=type_id).order_by("name").values_list("name", flat=True))
+    subgenres     = list(Subgenre.objects.order_by("name").values_list("name", flat=True))
+
+    if request.method == "POST":
+        form = IssueCompactForm(request.POST) if is_compact else IssueFullForm(request.POST)
+
+        if form.is_valid():
+            d = form.cleaned_data
+
+            if not is_compact:
+                publisher   = _resolve_fk(Publisher,   "name", d.get("publisher_name", ""))
+                periodicity = _resolve_fk(Periodicity, "name", d.get("periodicity_name", ""))
+                fmt         = _resolve_fk(Format,      "name", d.get("format_name", ""))
+                subgenre    = _resolve_fk(Subgenre,    "name", d.get("subgenre_name", ""))
+
+                title = Title.objects.create(
+                    name        = d["title_name"].strip(),
+                    type_id     = type_id,
+                    publisher   = publisher,
+                    periodicity = periodicity,
+                    format      = fmt,
+                    subgenre    = subgenre,
+                )
+
+            pub_date = _build_date(d.get("pub_month"), d.get("pub_year"))
+
+            issue = Issue.objects.create(
+                title            = title,
+                name             = d["name"].strip(),
+                subtitle         = d.get("subtitle", "").strip(),
+                issue_number     = d.get("issue_number", "").strip(),
+                date_publication = pub_date,
+                number_pages     = d.get("number_pages"),
+                isbn             = d.get("isbn", "").strip() if type_id == 2 else "",
+                synopsis         = d.get("synopsis", "").strip(),
+                image            = d.get("cover_path") or None,
+            )
+
+            # Dispara fill_gaps para o título afetado
+            fill_gaps(title)
+
+            return redirect(f"/{slug}/")
+
+    else:
+        if is_compact:
+            form = IssueCompactForm(initial=_next_issue_defaults(title))
+        else:
+            form = IssueFullForm()
+
+    context = _admin_context(request)
+    context.update({
+        "form":           form,
+        "type_id":        type_id,
+        "type_label":     type_label,
+        "slug":           slug,
+        "is_compact":     is_compact,
+        "title":          title,
+        "title_id":       title_id or "",
+        "publishers":     publishers,
+        "periodicities":  periodicities,
+        "formats":        formats,
+        "subgenres":      subgenres,
+        "show_isbn":      type_id == 2,
+    })
+    return render(request, "core/issue_form.html", context)
+
+
+@login_required
+@require_POST
+def upload_cover(request):
+    """
+    Recebe imagem via AJAX, salva em covers/temp/ e devolve path + URL.
+    O path vai para o hidden input cover_path e é associado à Issue no submit.
+    """
+    file = request.FILES.get("cover")
+    if not file:
+        return JsonResponse({"error": "Nenhum arquivo enviado."}, status=400)
+
+    allowed = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+    if file.content_type not in allowed:
+        return JsonResponse({"error": "Formato não suportado."}, status=400)
+
+    path = default_storage.save(f"covers/temp/{file.name}", file)
+    url  = default_storage.url(path)
+
+    return JsonResponse({"path": path, "url": url})
+
+
+# ── Ações AJAX ────────────────────────────────────────────────────────────────
+
+@login_required
 @require_POST
 def toggle_reading_list(request, title_id: int):
     title = get_object_or_404(Title, pk=title_id)
@@ -379,8 +514,6 @@ def toggle_reading_list(request, title_id: int):
         return JsonResponse({"status": "removed"})
     return JsonResponse({"status": "added"})
 
-
-# ── Ações AJAX ────────────────────────────────────────────────────────────────
 
 @login_required
 @require_POST
@@ -451,7 +584,6 @@ def toggle_read(request, issue_id: int):
             return JsonResponse({"status": "removed"})
         return JsonResponse({"status": "confirm_needed"})
 
-    # Auto-adiciona o título à lista de leitura se ainda não estiver
     ReadingList.objects.get_or_create(title=issue.title, user=user)
 
     next_data = _get_next_issue_data(user, issue)
