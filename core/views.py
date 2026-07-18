@@ -356,6 +356,7 @@ def issue_detail(request, type_id: int, type_label: str, issue_id: int):
         "show_isbn":       type_id == 2,
         "show_authors":    type_id == 2,
         "show_genre":      type_id == 2,
+        "show_original_content": type_id == 1,
     })
     return render(request, "core/issue_detail.html", context)
 
@@ -447,6 +448,7 @@ def issue_create(request, type_id: int, type_label: str):
                 date_publication = pub_date,
                 number_pages     = d.get("number_pages"),
                 isbn             = d.get("isbn", "").strip() if type_id == 2 else "",
+                original_content = d.get("original_content", "").strip() if type_id == 1 else "",
                 synopsis         = d.get("synopsis", "").strip(),
                 image            = d.get("cover_path") or None,
             )
@@ -454,7 +456,7 @@ def issue_create(request, type_id: int, type_label: str):
             # Dispara fill_gaps para o título afetado
             fill_gaps(title)
 
-            return redirect(f"/{slug}/")
+            return redirect(f"/{slug}/{issue.pk}/")
 
     else:
         if is_compact:
@@ -476,6 +478,7 @@ def issue_create(request, type_id: int, type_label: str):
         "formats":        formats,
         "subgenres":      subgenres,
         "show_isbn":      type_id == 2,
+        "show_original_content": type_id == 1,
     })
     return render(request, "core/issue_form.html", context)
 

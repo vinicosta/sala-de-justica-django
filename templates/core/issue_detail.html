@@ -145,6 +145,12 @@ Justiça{% endblock %}
                     <dd>{{ issue.isbn }}</dd>
                 </div>
                 {% endif %}
+                {% if show_original_content and issue.original_content %}
+                <div class="detail-dl-row">
+                    <dt>Conteúdo original:</dt>
+                    <dd>{{ issue.original_content }}</dd>
+                </div>
+                {% endif %}
                 {% if show_genre and issue.title.genre %}
                 <div class="detail-dl-row">
                     <dt>Gênero:</dt>

@@ -114,6 +114,15 @@ class IssueFullForm(forms.Form):
         required=False,
         widget=forms.TextInput(attrs={"class": "slj-input", "placeholder": "ISBN"}),
     )
+    original_content = forms.CharField(
+        label="Conteúdo original",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "slj-input",
+            "placeholder": "Ex: Nightwing (2016) 101-105",
+        }),
+    )
     synopsis = forms.CharField(
         label="Sinopse",
         required=False,
@@ -166,6 +175,12 @@ class IssueCompactForm(forms.Form):
     isbn = forms.CharField(
         label="ISBN",
         max_length=50,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "slj-input"}),
+    )
+    original_content = forms.CharField(
+        label="Conteúdo original",
+        max_length=255,
         required=False,
         widget=forms.TextInput(attrs={"class": "slj-input"}),
     )

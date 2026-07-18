@@ -204,6 +204,10 @@ class Issue(models.Model):
     )
     number_pages = models.PositiveIntegerField(null=True, blank=True)
     isbn = models.CharField(max_length=50, blank=True, null=True, default="")
+    original_content = models.CharField(
+        max_length=255, blank=True, null=True, default="",
+        help_text="Edição original em que o conteúdo foi publicado (ex: Nightwing (2016) 101-105). Apenas quadrinhos."
+    )
     synopsis = models.TextField(blank=True, null=True, default="")
     image = models.ImageField(upload_to=issue_cover_path, null=True, blank=True, max_length=255)
     authors = models.ManyToManyField(

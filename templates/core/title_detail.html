@@ -18,7 +18,7 @@
         </a>
         <div class="ml-auto flex items-center gap-2">
             {# Nova edição #}
-            <a href="/admin/core/issue/add/?title={{ title.pk }}" class="btn-action" title="Nova edição">
+            <a href="/{{ slug }}/nova/?title_id={{ title.pk }}" class="btn-action" title="Nova edição">
                 <span class="material-symbols-outlined">add</span>
             </a>
             {# Editar título #}
