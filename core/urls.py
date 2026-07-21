@@ -23,6 +23,14 @@ urlpatterns = [
     path("revistas/nova/",   views.issue_create,
          {"type_id": 3, "type_label": "Revistas"},   name="revistas_create"),
 
+    # ── Editar edição ──────────────────────────────────────────────────────
+    path("quadrinhos/<int:issue_id>/editar/", views.issue_edit,
+         {"type_id": 1, "type_label": "Quadrinhos"}, name="quadrinhos_edit"),
+    path("livros/<int:issue_id>/editar/",     views.issue_edit,
+         {"type_id": 2, "type_label": "Livros"},     name="livros_edit"),
+    path("revistas/<int:issue_id>/editar/",   views.issue_edit,
+         {"type_id": 3, "type_label": "Revistas"},   name="revistas_edit"),
+
     # ── Upload assíncrono de capa ──────────────────────────────────────────
     path("api/upload-cover/", views.upload_cover, name="upload_cover"),
 

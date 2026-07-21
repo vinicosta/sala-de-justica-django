@@ -424,6 +424,13 @@
     color: var(--slj-accent-hover);
 }
 
+.detail-edition-name {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--slj-text);
+    margin-top: 2px;
+}
+
 .detail-sub {
     font-size: .9rem;
     color: var(--slj-text-muted);

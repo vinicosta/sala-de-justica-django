@@ -23,22 +23,22 @@ Justiça{% endblock %}
     {# ── Cabeçalho ── #}
     <div class="detail-header">
         {% if type_id == 2 %}
-        {# Livros: linha 1 = nome da edição, linha 2 = título + vol. #}
+        {# Livros: H2 = nome do livro; subtítulo = série+vol (se houver) + autores + editora #}
         <h2 class="detail-title">{{ issue.name }}</h2>
         <p class="detail-sub">
-            {{ issue.title.name }}{% if issue.issue_number %}, vol. {{ issue.issue_number }}{% endif %}
-            {% if issue.authors.all %}
-            —
+            {% if issue.issue_number %}{{ issue.title.name }}, vol. {{ issue.issue_number }} — {% endif %}
             {% for author in issue.authors.all %}{{ author.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-            {% endif %}
             {% if issue.title.publisher %} — {{ issue.title.publisher.name }}{% endif %}
         </p>
         {% else %}
         {# Quadrinhos / Revistas: título + número #}
         <h2 class="detail-title">
-            {{ issue.title.name }}
+            {{ issue.name }}
             {% if issue.issue_number %}<span class="detail-number">#{{ issue.issue_number }}</span>{% endif %}
         </h2>
+        {% if issue.subtitle %}
+        <p class="detail-edition-name">{{ issue.subtitle }}</p>
+        {% endif %}
         <p class="detail-sub">
             {% if issue.title.publisher %}{{ issue.title.publisher.name }}{% endif %}
             {% if issue.date_publication %}
@@ -52,7 +52,7 @@ Justiça{% endblock %}
     {# ── Barra de ações ── #}
     <div class="detail-actions-bar">
         <div class="detail-actions-left">
-            <a href="#" class="action-pill action-pill--edit" title="Editar edição">
+            <a href="/{{ slug }}/{{ issue.pk }}/editar/" class="action-pill action-pill--edit" title="Editar edição">
                 <span class="material-symbols-outlined">edit</span>
             </a>
             <button class="action-pill action-pill--delete" title="Excluir edição" onclick="confirmDelete()">

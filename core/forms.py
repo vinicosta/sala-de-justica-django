@@ -190,3 +190,63 @@ class IssueCompactForm(forms.Form):
         widget=forms.Textarea(attrs={"class": "slj-textarea", "rows": 4}),
     )
     cover_path = forms.CharField(required=False, widget=forms.HiddenInput())
+
+class IssueEditForm(forms.Form):
+    """Form de edição de Issue existente."""
+
+    issue_number = forms.CharField(
+        label="Nº da edição",
+        max_length=50,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "slj-input", "autocomplete": "off"}),
+    )
+    pub_month = forms.ChoiceField(
+        label="Mês",
+        choices=MONTH_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={"class": "slj-select"}),
+    )
+    pub_year = forms.IntegerField(
+        label="Ano",
+        required=False,
+        widget=forms.NumberInput(attrs={
+            "class": "slj-input",
+            "min": "1900",
+            "max": "2099",
+        }),
+    )
+    name = forms.CharField(
+        label="Nome da edição",
+        max_length=255,
+        widget=forms.TextInput(attrs={"class": "slj-input", "autocomplete": "off"}),
+    )
+    subtitle = forms.CharField(
+        label="Subtítulo",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "slj-input", "autocomplete": "off"}),
+    )
+    number_pages = forms.IntegerField(
+        label="Nº de páginas",
+        required=False,
+        widget=forms.NumberInput(attrs={"class": "slj-input"}),
+    )
+    isbn = forms.CharField(
+        label="ISBN",
+        max_length=50,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "slj-input", "autocomplete": "off"}),
+    )
+    original_content = forms.CharField(
+        label="Conteúdo original",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "slj-input", "autocomplete": "off"}),
+    )
+    synopsis = forms.CharField(
+        label="Sinopse",
+        required=False,
+        widget=forms.Textarea(attrs={"class": "slj-textarea", "autocomplete": "off", "rows": 4}),
+    )
+    cover_path = forms.CharField(required=False, widget=forms.HiddenInput())
+    clear_cover = forms.BooleanField(required=False, widget=forms.HiddenInput())

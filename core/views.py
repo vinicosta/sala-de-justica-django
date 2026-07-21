@@ -218,40 +218,90 @@ def _resolve_fk(model, name_field: str, value: str):
 def _next_issue_defaults(title: Title) -> dict:
     from dateutil.relativedelta import relativedelta
 
-    last = (
-        Issue.objects
-        .filter(title=title, is_estimated=False)
-        .exclude(date_publication=None)
-        .order_by("-date_publication", "-issue_number")
-        .first()
-    )
+    type_id = title.type_id  # 1=quadrinhos, 2=livros, 3=revistas
+    is_book = type_id == 2
 
-    defaults = {"name": title.name}
+    if is_book:
+        last = (
+            Issue.objects
+            .filter(title=title, is_estimated=False)
+            .order_by("-id")
+            .first()
+        )
+        last_with_num = (
+            Issue.objects
+            .filter(title=title, is_estimated=False)
+            .exclude(issue_number="")
+            .exclude(issue_number=None)
+            .order_by("-id")
+            .first()
+        )
+        if last_with_num:
+            last = last_with_num
+    else:
+        last = (
+            Issue.objects
+            .filter(title=title, is_estimated=False)
+            .exclude(date_publication=None)
+            .order_by("-date_publication", "-issue_number")
+            .first()
+        )
+        if not last:
+            last = (
+                Issue.objects
+                .filter(title=title, is_estimated=False)
+                .order_by("-id")
+                .first()
+            )
 
-    if last and last.issue_number:
-        try:
-            m = re.match(r"(\d+)", last.issue_number)
-            if m:
-                defaults["issue_number"] = str(int(m.group(1)) + 1)
-        except (ValueError, AttributeError):
-            pass
+    defaults = {"name": last.name if last else title.name}
 
-    if last and last.date_publication and title.periodicity:
-        p = title.periodicity
-        delta_map = {
-            "day":   relativedelta(days=p.date_interval_number),
-            "week":  relativedelta(weeks=p.date_interval_number),
-            "month": relativedelta(months=p.date_interval_number),
-            "year":  relativedelta(years=p.date_interval_number),
-        }
-        delta = delta_map.get(p.date_interval)
-        if delta:
+    if is_book:
+        if last and last.issue_number:
+            try:
+                m = re.match(r"(\d+)", last.issue_number)
+                if m:
+                    defaults["issue_number"] = str(int(m.group(1)) + 1)
+                else:
+                    defaults["issue_number"] = "2"
+            except (ValueError, AttributeError):
+                defaults["issue_number"] = "2"
+        else:
+            defaults["issue_number"] = "2"
+    else:
+        if last and last.issue_number:
+            try:
+                m = re.match(r"(\d+)", last.issue_number)
+                if m:
+                    defaults["issue_number"] = str(int(m.group(1)) + 1)
+            except (ValueError, AttributeError):
+                pass
+
+        if last and last.date_publication:
+            # Determina o delta pela periodicidade (aceita formato longo e abreviado)
+            # Fallback: mensal se não tiver periodicidade definida
+            delta = relativedelta(months=1)  # default mensal
+            if title.periodicity:
+                p = title.periodicity
+                n = p.date_interval_number or 1
+                interval = (p.date_interval or "").lower()
+                delta_map = {
+                    "day":   relativedelta(days=n),
+                    "d":     relativedelta(days=n),
+                    "week":  relativedelta(weeks=n),
+                    "w":     relativedelta(weeks=n),
+                    "month": relativedelta(months=n),
+                    "m":     relativedelta(months=n),
+                    "year":  relativedelta(years=n),
+                    "y":     relativedelta(years=n),
+                }
+                delta = delta_map.get(interval, relativedelta(months=1))
             next_date = last.date_publication + delta
             defaults["pub_month"] = next_date.strftime("%m")
             defaults["pub_year"]  = next_date.year
-    elif last and last.date_publication:
-        defaults["pub_month"] = last.date_publication.strftime("%m")
-        defaults["pub_year"]  = last.date_publication.year
+        elif last and last.date_publication:
+            defaults["pub_month"] = last.date_publication.strftime("%m")
+            defaults["pub_year"]  = last.date_publication.year
 
     return defaults
 
@@ -479,6 +529,78 @@ def issue_create(request, type_id: int, type_label: str):
         "subgenres":      subgenres,
         "show_isbn":      type_id == 2,
         "show_original_content": type_id == 1,
+        "back_url":       f"/{slug}/",
+        "existing_cover_url": None,
+        "is_edit":        False,
+    })
+    return render(request, "core/issue_form.html", context)
+
+
+@login_required
+def issue_edit(request, type_id: int, type_label: str, issue_id: int):
+    from .forms import IssueEditForm
+    slug  = _type_slug(type_id)
+    issue = get_object_or_404(Issue, pk=issue_id, title__type_id=type_id)
+    title = issue.title
+    back_url = f"/{slug}/{issue.pk}/"
+
+    if request.method == "POST":
+        form = IssueEditForm(request.POST)
+        if form.is_valid():
+            d = form.cleaned_data
+            pub_date = _build_date(d.get("pub_month"), d.get("pub_year"))
+            issue.name             = d["name"].strip()
+            issue.subtitle         = d.get("subtitle", "").strip()
+            issue.issue_number     = d.get("issue_number", "").strip()
+            issue.date_publication = pub_date
+            issue.number_pages     = d.get("number_pages")
+            issue.synopsis         = d.get("synopsis", "").strip()
+            if type_id == 2:
+                issue.isbn = d.get("isbn", "").strip()
+            if type_id == 1:
+                issue.original_content = d.get("original_content", "").strip()
+            if d.get("clear_cover"):
+                issue.image = None
+            elif d.get("cover_path"):
+                issue.image = d["cover_path"]
+            issue.save()
+            fill_gaps(title)
+            return redirect(back_url)
+    else:
+        initial = {
+            "name":             issue.name,
+            "subtitle":         issue.subtitle or "",
+            "issue_number":     issue.issue_number or "",
+            "pub_month":        issue.date_publication.strftime("%m") if issue.date_publication else "",
+            "pub_year":         issue.date_publication.year if issue.date_publication else None,
+            "number_pages":     issue.number_pages,
+            "isbn":             issue.isbn or "",
+            "original_content": issue.original_content or "",
+            "synopsis":         issue.synopsis or "",
+        }
+        form = IssueEditForm(initial=initial)
+
+    context = _admin_context(request)
+    context.update({
+        "form":                  form,
+        "issue":                 issue,
+        "title":                 title,
+        "type_id":               type_id,
+        "type_label":            type_label,
+        "slug":                  slug,
+        "is_edit":               True,
+        "is_compact":            True,
+        "title_id":              title.pk,
+        "show_isbn":             type_id == 2,
+        "show_original_content": type_id == 1,
+        "show_issue_number":     type_id != 2,
+        "show_pub_date":         type_id != 2,
+        "publishers":            [],
+        "periodicities":         [],
+        "formats":               [],
+        "subgenres":             [],
+        "back_url":              back_url,
+        "existing_cover_url":    issue.image.url if issue.image else None,
     })
     return render(request, "core/issue_form.html", context)
 

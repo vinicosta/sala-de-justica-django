@@ -2,25 +2,20 @@
 {% extends "unfold/layouts/base_simple.html" %}
 {% load static i18n %}
 
-{% block title %}Nova edição — {{ type_label }} — Sala de Justiça{% endblock %}
+{% block title %}{% if is_edit %}Editar edição{% else %}Nova edição{% endif %} — {{ type_label }} — Sala de Justiça{% endblock %}
 
 {% block extrastyle %}
 <link rel="stylesheet" href="{% static 'core/app.css' %}">
 {% endblock %}
 
 {% block content_before %}
-{% if type_id == 1 %}{% url 'quadrinhos' as back_url %}
-{% elif type_id == 2 %}{% url 'livros' as back_url %}
-{% else %}{% url 'revistas' as back_url %}{% endif %}
 <div class="bg-white border-b border-base-200 dark:bg-base-900 dark:border-base-800 px-4 mb-6 z-40">
     <div class="container mx-auto flex items-center h-16 gap-4">
         <a href="{{ back_url }}" class="slj-btn-back">
             <span class="material-symbols-outlined">arrow_back</span>
-            {{ type_label }}
+            {% if is_edit %}{{ issue.title.name }}{% else %}{{ type_label }}{% endif %}
         </a>
-        <h1 class="slj-page-title ml-2">
-            {% if is_compact %}Nova edição{% else %}Nova edição — {{ type_label }}{% endif %}
-        </h1>
+        <h1 class="slj-page-title ml-2">{% if is_edit %}Editar edição{% elif is_compact %}Nova edição{% else %}Nova edição — {{ type_label }}{% endif %}</h1>
     </div>
 </div>
 {% endblock %}
@@ -38,12 +33,13 @@
 {% endif %}
 
 <div class="slj-form-wrap">
-    <form method="post" class="slj-form" novalidate>
+    <form method="post" class="slj-form" novalidate autocomplete="off">
         {% csrf_token %}
         <input type="hidden" name="title_id" value="{{ title_id }}">
         {{ form.cover_path }}
+        {% if is_edit %}{{ form.clear_cover }}{% endif %}
 
-        {# ── Datalists para autocomplete ── #}
+        {% if not is_compact and not is_edit %}
         <datalist id="list-publishers">
             {% for p in publishers %}<option value="{{ p }}">{% endfor %}
         </datalist>
@@ -56,20 +52,16 @@
         <datalist id="list-subgenres">
             {% for s in subgenres %}<option value="{{ s }}">{% endfor %}
         </datalist>
+        {% endif %}
 
-        {# ════════════════════════════════════════════════════════════════════ #}
-        {# SEÇÃO 1 — Título (só no form completo) #}
-        {# ════════════════════════════════════════════════════════════════════ #}
-        {% if not is_compact %}
+        {% if not is_compact and not is_edit %}
         <section class="slj-form-section">
             <h2 class="slj-form-section-title">Título</h2>
-
             <div class="slj-field">
                 <label class="slj-label">Nome do título <span class="slj-required">*</span></label>
                 {{ form.title_name }}
                 {% if form.title_name.errors %}<p class="slj-field-error">{{ form.title_name.errors.0 }}</p>{% endif %}
             </div>
-
             <div class="slj-field-row slj-field-row--2">
                 <div class="slj-field">
                     <label class="slj-label">Editora</label>
@@ -80,7 +72,6 @@
                     {{ form.periodicity_name }}
                 </div>
             </div>
-
             <div class="slj-field-row slj-field-row--2">
                 <div class="slj-field">
                     <label class="slj-label">Formato</label>
@@ -93,7 +84,6 @@
             </div>
         </section>
         {% else %}
-        {# Form compacto: mostra info do título como leitura #}
         <div class="slj-title-badge">
             <span class="material-symbols-outlined">collections_bookmark</span>
             <div>
@@ -106,23 +96,24 @@
         </div>
         {% endif %}
 
-        {# ════════════════════════════════════════════════════════════════════ #}
-        {# SEÇÃO 2 — Edição #}
-        {# ════════════════════════════════════════════════════════════════════ #}
         <section class="slj-form-section">
             <h2 class="slj-form-section-title">Edição</h2>
-
             <div class="slj-field">
                 <label class="slj-label">Nome da edição <span class="slj-required">*</span></label>
                 {{ form.name }}
                 {% if form.name.errors %}<p class="slj-field-error">{{ form.name.errors.0 }}</p>{% endif %}
             </div>
-
             <div class="slj-field">
                 <label class="slj-label">Subtítulo</label>
                 {{ form.subtitle }}
             </div>
-
+            {% if show_issue_number or not is_edit %}
+            {% if type_id == 2 %}
+            <div class="slj-field">
+                <label class="slj-label">Volume</label>
+                {{ form.issue_number }}
+            </div>
+            {% else %}
             <div class="slj-field-row slj-field-row--3">
                 <div class="slj-field">
                     <label class="slj-label">Nº da edição</label>
@@ -137,7 +128,8 @@
                     {{ form.pub_year }}
                 </div>
             </div>
-
+            {% endif %}
+            {% endif %}
             <div class="slj-field-row slj-field-row--2">
                 <div class="slj-field">
                     <label class="slj-label">Nº de páginas</label>
@@ -150,34 +142,35 @@
                 </div>
                 {% endif %}
             </div>
-
             {% if show_original_content %}
             <div class="slj-field">
                 <label class="slj-label">Conteúdo original</label>
                 {{ form.original_content }}
             </div>
             {% endif %}
-
             <div class="slj-field">
                 <label class="slj-label">Sinopse</label>
                 {{ form.synopsis }}
             </div>
         </section>
 
-        {# ════════════════════════════════════════════════════════════════════ #}
-        {# SEÇÃO 3 — Capa #}
-        {# ════════════════════════════════════════════════════════════════════ #}
         <section class="slj-form-section">
             <h2 class="slj-form-section-title">Capa</h2>
-
             <div class="slj-cover-upload">
-                {# Área de preview #}
                 <div class="slj-cover-preview" id="coverPreview">
+                    {% if existing_cover_url %}
+                    <img src="{{ existing_cover_url }}" alt="Capa atual" class="slj-cover-img" id="coverImg">
+                    <div class="slj-cover-placeholder" id="coverPlaceholder" style="display:none">
+                        <span class="material-symbols-outlined">add_photo_alternate</span>
+                        <span>Escolher capa</span>
+                    </div>
+                    {% else %}
                     <div class="slj-cover-placeholder" id="coverPlaceholder">
                         <span class="material-symbols-outlined">add_photo_alternate</span>
                         <span>Escolher capa</span>
                     </div>
                     <img src="" alt="Preview da capa" class="slj-cover-img" id="coverImg" style="display:none">
+                    {% endif %}
                     <div class="slj-cover-overlay" id="coverOverlay" style="display:none">
                         <div class="slj-cover-spinner"></div>
                     </div>
@@ -185,30 +178,26 @@
                         <span class="material-symbols-outlined">check_circle</span>
                     </div>
                 </div>
-
-                {# Input real, escondido #}
-                <input type="file" id="coverFileInput" accept="image/*" style="display:none">
-
+                <input type="file" id="coverFileInput" name="cover_file_upload" accept="image/*" style="display:none" tabindex="-1">
                 <div class="slj-cover-actions">
                     <button type="button" class="slj-btn-choose-cover" id="btnChooseCover">
                         <span class="material-symbols-outlined">upload</span>
-                        Escolher imagem
+                        {% if existing_cover_url %}Trocar capa{% else %}Escolher imagem{% endif %}
                     </button>
-                    <button type="button" class="slj-btn-remove-cover" id="btnRemoveCover" style="display:none">
+                    <button type="button" class="slj-btn-remove-cover" id="btnRemoveCover" style="{% if existing_cover_url %}display:flex{% else %}display:none{% endif %}">
                         <span class="material-symbols-outlined">delete</span>
-                        Remover
+                        Remover capa
                     </button>
                     <p class="slj-cover-hint">JPG, PNG ou WebP · máx. 5 MB</p>
                 </div>
             </div>
         </section>
 
-        {# ── Ações ── #}
         <div class="slj-form-actions">
             <a href="{{ back_url }}" class="btn btn-ghost">Cancelar</a>
             <button type="submit" class="slj-btn-submit" id="submitBtn">
                 <span class="material-symbols-outlined">save</span>
-                Salvar edição
+                {% if is_edit %}Salvar alterações{% else %}Salvar edição{% endif %}
             </button>
         </div>
 
@@ -221,22 +210,18 @@
 <script>
     const UPLOAD_COVER_URL = "{% url 'upload_cover' %}";
     const CSRF_TOKEN = "{{ csrf_token }}";
-    const IS_COMPACT = {% if is_compact %}true{% else %} false{% endif %};
+    const IS_COMPACT = {% if is_compact %}true{% else %}false{% endif %};
+    const IS_EDIT = {% if is_edit %}true{% else %}false{% endif %};
+    const HAS_EXISTING_COVER = {% if existing_cover_url %}true{% else %}false{% endif %};
 
     document.addEventListener("DOMContentLoaded", function () {
 
-        // ── Auto-copia "Nome do título" → "Nome da edição" (só no form completo) ──
         (function () {
-            if (IS_COMPACT) return;
-
+            if (IS_COMPACT || IS_EDIT) return;
             const titleNameInput = document.getElementById("id_title_name");
             const editionNameInput = document.getElementById("id_name");
             if (!titleNameInput || !editionNameInput) return;
-
-            // Considera "não tocado" enquanto o campo de edição estiver vazio
-            // ou ainda igual ao que foi copiado automaticamente da última vez.
             let lastAutoValue = "";
-
             titleNameInput.addEventListener("input", () => {
                 const isUntouched = editionNameInput.value === "" || editionNameInput.value === lastAutoValue;
                 if (isUntouched) {
@@ -244,31 +229,28 @@
                     lastAutoValue = titleNameInput.value;
                 }
             });
-
-            // Se o usuário editar manualmente o nome da edição, a cópia automática para.
             editionNameInput.addEventListener("input", () => {
                 if (editionNameInput.value !== lastAutoValue) {
-                    lastAutoValue = "__manual__"; // qualquer valor que nunca bata de novo
+                    lastAutoValue = "__manual__";
                 }
             });
         })();
 
         (function () {
-            const fileInput = document.getElementById("coverFileInput");
-            const btnChoose = document.getElementById("btnChooseCover");
-            const btnRemove = document.getElementById("btnRemoveCover");
-            const preview = document.getElementById("coverPreview");
+            const fileInput   = document.getElementById("coverFileInput");
+            const btnChoose   = document.getElementById("btnChooseCover");
+            const btnRemove   = document.getElementById("btnRemoveCover");
+            const preview     = document.getElementById("coverPreview");
             const placeholder = document.getElementById("coverPlaceholder");
-            const img = document.getElementById("coverImg");
-            const overlay = document.getElementById("coverOverlay");
-            const done = document.getElementById("coverDone");
-            const coverPath = document.querySelector('input[name="cover_path"]');
-            const submitBtn = document.getElementById("submitBtn");
+            const img         = document.getElementById("coverImg");
+            const overlay     = document.getElementById("coverOverlay");
+            const done        = document.getElementById("coverDone");
+            const coverPath   = document.querySelector('input[name="cover_path"]');
+            const clearCover  = document.querySelector('input[name="clear_cover"]');
+            const submitBtn   = document.getElementById("submitBtn");
+            let hasExistingCover = HAS_EXISTING_COVER;
 
-            // Abre o seletor de arquivo
             btnChoose.addEventListener("click", () => fileInput.click());
-
-            // Também clica na área de preview se não tiver imagem
             preview.addEventListener("click", () => {
                 if (!img.src || img.style.display === "none") fileInput.click();
             });
@@ -276,15 +258,11 @@
             fileInput.addEventListener("change", async () => {
                 const file = fileInput.files[0];
                 if (!file) return;
-
-                // Valida tamanho (5 MB)
                 if (file.size > 5 * 1024 * 1024) {
                     alert("Arquivo muito grande. Máximo 5 MB.");
                     fileInput.value = "";
                     return;
                 }
-
-                // 1. Mostra preview local imediatamente + overlay de loading
                 const localUrl = URL.createObjectURL(file);
                 img.src = localUrl;
                 img.style.display = "block";
@@ -295,18 +273,14 @@
                 submitBtn.disabled = true;
                 btnChoose.style.display = "none";
                 btnRemove.style.display = "none";
-
-                // 2. Faz upload para o servidor
+                if (clearCover) clearCover.value = "";
                 try {
                     const formData = new FormData();
                     formData.append("cover", file);
                     formData.append("csrfmiddlewaretoken", CSRF_TOKEN);
-
-                    const res = await fetch(UPLOAD_COVER_URL, { method: "POST", body: formData });
+                    const res  = await fetch(UPLOAD_COVER_URL, { method: "POST", body: formData });
                     const data = await res.json();
-
                     if (data.path) {
-                        // 3. Upload OK — remove overlay, mostra ✓
                         coverPath.value = data.path;
                         overlay.style.display = "none";
                         done.style.display = "flex";
@@ -314,20 +288,20 @@
                         preview.classList.add("slj-cover-ready");
                         submitBtn.disabled = false;
                         btnRemove.style.display = "flex";
-
-                        // ✓ some após 2s
+                        btnChoose.style.display = "none";
+                        hasExistingCover = false;
                         setTimeout(() => { done.style.display = "none"; }, 2000);
                     } else {
                         throw new Error(data.error || "Erro no upload.");
                     }
                 } catch (err) {
-                    // Upload falhou — remove preview e avisa
                     resetCover();
                     alert("Erro ao enviar a imagem: " + err.message);
                 }
             });
 
             btnRemove.addEventListener("click", () => {
+                if (IS_EDIT && hasExistingCover && clearCover) clearCover.value = "true";
                 resetCover();
             });
 
@@ -343,9 +317,10 @@
                 submitBtn.disabled = false;
                 btnChoose.style.display = "flex";
                 btnRemove.style.display = "none";
+                hasExistingCover = false;
             }
         })();
 
-    }); // fim do DOMContentLoaded
+    });
 </script>
 {% endblock %}

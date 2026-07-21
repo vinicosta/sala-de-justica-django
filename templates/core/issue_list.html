@@ -153,13 +153,13 @@
             </p>
             {% else %}
             <p class="card-title">
-                {{ issue.title.name }}
+                {{ issue.name }}
                 {% if issue.issue_number %}
                 <span class="card-number">#{{ issue.issue_number }}</span>
                 {% endif %}
             </p>
-            {% if issue.name and issue.name != issue.title.name %}
-            <p class="card-subtitle">{{ issue.name }}</p>
+            {% if issue.title.name != issue.name %}
+            <p class="card-subtitle">{{ issue.title.name }}</p>
             {% endif %}
             <p class="card-meta">
                 {% if issue.title.publisher %}{{ issue.title.publisher.name }}{% endif %}
