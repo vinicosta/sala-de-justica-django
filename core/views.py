@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import IssueCompactForm, IssueFullForm
 from .models import (
-    CollectionItem, Format, Issue, Periodicity,
+    Author, CollectionItem, Format, Genre, Issue, Periodicity,
     Publisher, ReadItem, ReadingList, Subgenre, Title,
 )
 from .gap_detection import fill_gaps
@@ -215,6 +215,24 @@ def _resolve_fk(model, name_field: str, value: str):
     return model.objects.filter(**{f"{name_field}__iexact": value.strip()}).first()
 
 
+def _resolve_authors(names_str: str) -> list:
+    """
+    Recebe nomes separados por '|' (vindos do campo hidden authors_names),
+    busca cada autor por nome (case-insensitive) e cria os que não existirem.
+    Retorna a lista de objetos Author.
+    """
+    authors = []
+    for raw in (names_str or "").split("|"):
+        name = raw.strip()
+        if not name:
+            continue
+        author = Author.objects.filter(name__iexact=name).first()
+        if not author:
+            author = Author.objects.create(name=name)
+        authors.append(author)
+    return authors
+
+
 def _next_issue_defaults(title: Title) -> dict:
     from dateutil.relativedelta import relativedelta
 
@@ -255,6 +273,11 @@ def _next_issue_defaults(title: Title) -> dict:
             )
 
     defaults = {"name": last.name if last else title.name}
+
+    if is_book and last:
+        defaults["authors_names"] = "|".join(
+            last.authors.order_by("name").values_list("name", flat=True)
+        )
 
     if is_book:
         if last and last.issue_number:
@@ -446,6 +469,53 @@ def title_detail(request, title_id: int, type_id: int, type_label: str, slug: st
 
 
 @login_required
+def title_edit(request, title_id: int, type_id: int, type_label: str, slug: str):
+    """Edição dos dados básicos de um Title existente."""
+    from .forms import TitleEditForm
+    title = get_object_or_404(Title, pk=title_id, type_id=type_id)
+    back_url = f"/{slug}/titulo/{title.pk}/"
+
+    # Datalists para autocomplete
+    publishers    = list(Publisher.objects.order_by("name").values_list("name", flat=True))
+    periodicities = list(Periodicity.objects.order_by("name").values_list("name", flat=True))
+    formats       = list(Format.objects.filter(type_id=type_id).order_by("name").values_list("name", flat=True))
+
+    if request.method == "POST":
+        form = TitleEditForm(request.POST)
+        if form.is_valid():
+            d = form.cleaned_data
+            title.name        = d["name"].strip()
+            title.publisher   = _resolve_fk(Publisher,   "name", d.get("publisher_name", ""))
+            title.periodicity = _resolve_fk(Periodicity, "name", d.get("periodicity_name", ""))
+            title.format      = _resolve_fk(Format,      "name", d.get("format_name", ""))
+            title.save()
+            return redirect(back_url)
+    else:
+        initial = {
+            "name":              title.name,
+            "publisher_name":    title.publisher.name if title.publisher else "",
+            "periodicity_name":  title.periodicity.name if title.periodicity else "",
+            "format_name":       title.format.name if title.format else "",
+        }
+        form = TitleEditForm(initial=initial)
+
+    context = _admin_context(request)
+    context.update({
+        "form":           form,
+        "title":          title,
+        "type_id":        type_id,
+        "type_label":     type_label,
+        "slug":           slug,
+        "publishers":     publishers,
+        "periodicities":  periodicities,
+        "formats":        formats,
+        "back_url":       back_url,
+        "show_periodicity": type_id != 2,
+    })
+    return render(request, "core/title_form.html", context)
+
+
+@login_required
 def issue_create(request, type_id: int, type_label: str):
     """
     Form híbrido:
@@ -466,6 +536,13 @@ def issue_create(request, type_id: int, type_label: str):
     periodicities = list(Periodicity.objects.order_by("name").values_list("name", flat=True))
     formats       = list(Format.objects.filter(type_id=type_id).order_by("name").values_list("name", flat=True))
     subgenres     = list(Subgenre.objects.order_by("name").values_list("name", flat=True))
+    authors_list  = list(Author.objects.order_by("name").values_list("name", flat=True))
+    genres        = list(Genre.objects.order_by("name").values_list("name", flat=True))
+    # Pares subgênero → gênero para o filtro em cascata (livros)
+    subgenres_map = json.dumps([
+        {"name": s.name, "genre": s.genre.name}
+        for s in Subgenre.objects.select_related("genre").order_by("name")
+    ])
 
     if request.method == "POST":
         form = IssueCompactForm(request.POST) if is_compact else IssueFullForm(request.POST)
@@ -475,8 +552,9 @@ def issue_create(request, type_id: int, type_label: str):
 
             if not is_compact:
                 publisher   = _resolve_fk(Publisher,   "name", d.get("publisher_name", ""))
-                periodicity = _resolve_fk(Periodicity, "name", d.get("periodicity_name", ""))
+                periodicity = _resolve_fk(Periodicity, "name", d.get("periodicity_name", "")) if type_id != 2 else None
                 fmt         = _resolve_fk(Format,      "name", d.get("format_name", ""))
+                genre       = _resolve_fk(Genre,       "name", d.get("genre_name", "")) if type_id == 2 else None
                 subgenre    = _resolve_fk(Subgenre,    "name", d.get("subgenre_name", ""))
 
                 title = Title.objects.create(
@@ -485,6 +563,7 @@ def issue_create(request, type_id: int, type_label: str):
                     publisher   = publisher,
                     periodicity = periodicity,
                     format      = fmt,
+                    genre       = genre,
                     subgenre    = subgenre,
                 )
 
@@ -502,6 +581,10 @@ def issue_create(request, type_id: int, type_label: str):
                 synopsis         = d.get("synopsis", "").strip(),
                 image            = d.get("cover_path") or None,
             )
+
+            # Autores (apenas livros)
+            if type_id == 2:
+                issue.authors.set(_resolve_authors(d.get("authors_names", "")))
 
             # Dispara fill_gaps para o título afetado
             fill_gaps(title)
@@ -527,8 +610,12 @@ def issue_create(request, type_id: int, type_label: str):
         "periodicities":  periodicities,
         "formats":        formats,
         "subgenres":      subgenres,
+        "authors_list":   authors_list,
+        "genres":         genres,
+        "subgenres_map":  subgenres_map,
         "show_isbn":      type_id == 2,
         "show_original_content": type_id == 1,
+        "show_authors_field": type_id == 2,
         "back_url":       f"/{slug}/",
         "existing_cover_url": None,
         "is_edit":        False,
@@ -564,6 +651,11 @@ def issue_edit(request, type_id: int, type_label: str, issue_id: int):
             elif d.get("cover_path"):
                 issue.image = d["cover_path"]
             issue.save()
+
+            # Autores (apenas livros)
+            if type_id == 2:
+                issue.authors.set(_resolve_authors(d.get("authors_names", "")))
+
             fill_gaps(title)
             return redirect(back_url)
     else:
@@ -577,6 +669,9 @@ def issue_edit(request, type_id: int, type_label: str, issue_id: int):
             "isbn":             issue.isbn or "",
             "original_content": issue.original_content or "",
             "synopsis":         issue.synopsis or "",
+            "authors_names":    "|".join(
+                issue.authors.order_by("name").values_list("name", flat=True)
+            ),
         }
         form = IssueEditForm(initial=initial)
 
@@ -599,6 +694,10 @@ def issue_edit(request, type_id: int, type_label: str, issue_id: int):
         "periodicities":         [],
         "formats":               [],
         "subgenres":             [],
+        "authors_list":          list(Author.objects.order_by("name").values_list("name", flat=True)),
+        "genres":                [],
+        "subgenres_map":         "[]",
+        "show_authors_field":    type_id == 2,
         "back_url":              back_url,
         "existing_cover_url":    issue.image.url if issue.image else None,
     })

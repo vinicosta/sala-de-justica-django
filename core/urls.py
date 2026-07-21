@@ -55,4 +55,12 @@ urlpatterns = [
          {"type_id": 2, "type_label": "Livros",     "slug": "livros"},     name="livros_titulo"),
     path("revistas/titulo/<int:title_id>/",   views.title_detail,
          {"type_id": 3, "type_label": "Revistas",   "slug": "revistas"},   name="revistas_titulo"),
+
+    # ── Editar título ────────────────────────────────────────────────────────
+    path("quadrinhos/titulo/<int:title_id>/editar/", views.title_edit,
+         {"type_id": 1, "type_label": "Quadrinhos", "slug": "quadrinhos"}, name="quadrinhos_titulo_edit"),
+    path("livros/titulo/<int:title_id>/editar/",     views.title_edit,
+         {"type_id": 2, "type_label": "Livros",     "slug": "livros"},     name="livros_titulo_edit"),
+    path("revistas/titulo/<int:title_id>/editar/",   views.title_edit,
+         {"type_id": 3, "type_label": "Revistas",   "slug": "revistas"},   name="revistas_titulo_edit"),
 ]

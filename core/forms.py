@@ -46,6 +46,17 @@ class IssueFullForm(forms.Form):
             "autocomplete": "off",
         }),
     )
+    genre_name = forms.CharField(
+        label="Gênero",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "slj-input",
+            "placeholder": "Digite para filtrar…",
+            "list": "list-genres",
+            "autocomplete": "off",
+        }),
+    )
     format_name = forms.CharField(
         label="Formato",
         max_length=255,
@@ -129,6 +140,7 @@ class IssueFullForm(forms.Form):
         widget=forms.Textarea(attrs={"class": "slj-textarea", "rows": 4, "placeholder": "Sinopse (opcional)"}),
     )
     # Campo hidden preenchido pelo JS após upload assíncrono da capa
+    authors_names = forms.CharField(required=False, widget=forms.HiddenInput())
     cover_path = forms.CharField(required=False, widget=forms.HiddenInput())
 
 
@@ -189,6 +201,7 @@ class IssueCompactForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={"class": "slj-textarea", "rows": 4}),
     )
+    authors_names = forms.CharField(required=False, widget=forms.HiddenInput())
     cover_path = forms.CharField(required=False, widget=forms.HiddenInput())
 
 class IssueEditForm(forms.Form):
@@ -248,5 +261,48 @@ class IssueEditForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={"class": "slj-textarea", "autocomplete": "off", "rows": 4}),
     )
+    authors_names = forms.CharField(required=False, widget=forms.HiddenInput())
     cover_path = forms.CharField(required=False, widget=forms.HiddenInput())
     clear_cover = forms.BooleanField(required=False, widget=forms.HiddenInput())
+
+class TitleEditForm(forms.Form):
+    """Form de edição dos dados de um Title existente (sem tipo, gênero/subgênero, status/origin)."""
+
+    name = forms.CharField(
+        label="Nome do título",
+        max_length=255,
+        widget=forms.TextInput(attrs={"class": "slj-input", "autocomplete": "off"}),
+    )
+    publisher_name = forms.CharField(
+        label="Editora",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "slj-input",
+            "placeholder": "Digite para filtrar…",
+            "list": "list-publishers",
+            "autocomplete": "off",
+        }),
+    )
+    periodicity_name = forms.CharField(
+        label="Periodicidade",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "slj-input",
+            "placeholder": "Digite para filtrar…",
+            "list": "list-periodicities",
+            "autocomplete": "off",
+        }),
+    )
+    format_name = forms.CharField(
+        label="Formato",
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "slj-input",
+            "placeholder": "Digite para filtrar…",
+            "list": "list-formats",
+            "autocomplete": "off",
+        }),
+    )

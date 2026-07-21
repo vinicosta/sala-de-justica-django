@@ -1,0 +1,88 @@
+{# templates/core/title_form.html #}
+{% extends "unfold/layouts/base_simple.html" %}
+{% load static i18n %}
+
+{% block title %}Editar título — {{ title.name }} — Sala de Justiça{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'core/app.css' %}">
+{% endblock %}
+
+{% block content_before %}
+<div class="bg-white border-b border-base-200 dark:bg-base-900 dark:border-base-800 px-4 mb-6 z-40">
+    <div class="container mx-auto flex items-center h-16 gap-4">
+        <a href="{{ back_url }}" class="slj-btn-back">
+            <span class="material-symbols-outlined">arrow_back</span>
+            {{ title.name }}
+        </a>
+        <h1 class="slj-page-title ml-2">Editar título</h1>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+<div class="slj-messages">
+    {% for msg in messages %}
+    <div class="slj-message slj-message--{{ msg.tags }}">
+        <span class="material-symbols-outlined">check_circle</span>{{ msg }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="slj-form-wrap">
+    <form method="post" class="slj-form" novalidate autocomplete="off">
+        {% csrf_token %}
+
+        <datalist id="list-publishers">
+            {% for p in publishers %}<option value="{{ p }}">{% endfor %}
+        </datalist>
+        <datalist id="list-periodicities">
+            {% for p in periodicities %}<option value="{{ p }}">{% endfor %}
+        </datalist>
+        <datalist id="list-formats">
+            {% for f in formats %}<option value="{{ f }}">{% endfor %}
+        </datalist>
+
+        <section class="slj-form-section">
+            <h2 class="slj-form-section-title">Título</h2>
+
+            <div class="slj-field">
+                <label class="slj-label">Nome do título <span class="slj-required">*</span></label>
+                {{ form.name }}
+                {% if form.name.errors %}<p class="slj-field-error">{{ form.name.errors.0 }}</p>{% endif %}
+            </div>
+
+            <div class="slj-field-row slj-field-row--2">
+                <div class="slj-field">
+                    <label class="slj-label">Editora</label>
+                    {{ form.publisher_name }}
+                </div>
+                {% if show_periodicity %}
+                <div class="slj-field">
+                    <label class="slj-label">Periodicidade</label>
+                    {{ form.periodicity_name }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="slj-field">
+                <label class="slj-label">Formato</label>
+                {{ form.format_name }}
+            </div>
+        </section>
+
+        <div class="slj-form-actions">
+            <a href="{{ back_url }}" class="btn btn-ghost">Cancelar</a>
+            <button type="submit" class="slj-btn-submit" id="submitBtn">
+                <span class="material-symbols-outlined">save</span>
+                Salvar alterações
+            </button>
+        </div>
+
+    </form>
+</div>
+
+{% endblock %}

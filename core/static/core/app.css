@@ -1212,6 +1212,83 @@
     color: var(--slj-text-muted);
 }
 
+/* ── Chips de autores ────────────────────────────────────────────────────── */
+.slj-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.slj-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--slj-accent-soft);
+    color: var(--slj-accent-hover);
+    border: 1px solid var(--slj-accent);
+    border-radius: 999px;
+    padding: 4px 6px 4px 12px;
+    font-size: .82rem;
+    font-weight: 500;
+}
+
+.slj-chip-x {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 50%;
+    transition: background var(--slj-transition);
+}
+
+.slj-chip-x:hover {
+    background: rgba(0, 0, 0, .12);
+}
+
+.slj-chip-x .material-symbols-outlined {
+    font-size: 15px;
+}
+
+.slj-chip-input-row {
+    display: flex;
+    gap: 8px;
+}
+
+.slj-chip-input-row .slj-input {
+    flex: 1;
+}
+
+.slj-btn-add-chip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    flex-shrink: 0;
+    background: var(--slj-accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background var(--slj-transition);
+}
+
+.slj-btn-add-chip:hover {
+    background: var(--slj-accent-hover);
+}
+
+.slj-field-hint {
+    font-size: .72rem;
+    color: var(--slj-text-muted);
+    margin-top: 4px;
+}
+
+
 /* ── Ações do form ───────────────────────────────────────────────────────── */
 .slj-form-actions {
     display: flex;

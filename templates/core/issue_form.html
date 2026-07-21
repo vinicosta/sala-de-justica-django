@@ -39,7 +39,15 @@
         {{ form.cover_path }}
         {% if is_edit %}{{ form.clear_cover }}{% endif %}
 
+        {% if show_authors_field %}
+        <datalist id="list-authors">
+            {% for a in authors_list %}<option value="{{ a }}">{% endfor %}
+        </datalist>
+        {% endif %}
         {% if not is_compact and not is_edit %}
+        <datalist id="list-genres">
+            {% for g in genres %}<option value="{{ g }}">{% endfor %}
+        </datalist>
         <datalist id="list-publishers">
             {% for p in publishers %}<option value="{{ p }}">{% endfor %}
         </datalist>
@@ -67,10 +75,17 @@
                     <label class="slj-label">Editora</label>
                     {{ form.publisher_name }}
                 </div>
+                {% if type_id == 2 %}
+                <div class="slj-field">
+                    <label class="slj-label">Gênero</label>
+                    {{ form.genre_name }}
+                </div>
+                {% else %}
                 <div class="slj-field">
                     <label class="slj-label">Periodicidade</label>
                     {{ form.periodicity_name }}
                 </div>
+                {% endif %}
             </div>
             <div class="slj-field-row slj-field-row--2">
                 <div class="slj-field">
@@ -107,6 +122,22 @@
                 <label class="slj-label">Subtítulo</label>
                 {{ form.subtitle }}
             </div>
+            {% if show_authors_field %}
+            <div class="slj-field">
+                <label class="slj-label">Autores</label>
+                {{ form.authors_names }}
+                <div class="slj-chips" id="authorChips"></div>
+                <div class="slj-chip-input-row">
+                    <input type="text" class="slj-input" id="authorInput"
+                           placeholder="Digite o nome e pressione Enter…"
+                           list="list-authors" autocomplete="off">
+                    <button type="button" class="slj-btn-add-chip" id="btnAddAuthor" title="Adicionar autor">
+                        <span class="material-symbols-outlined">add</span>
+                    </button>
+                </div>
+                <p class="slj-field-hint">Autores novos serão cadastrados automaticamente.</p>
+            </div>
+            {% endif %}
             {% if show_issue_number or not is_edit %}
             {% if type_id == 2 %}
             <div class="slj-field">
@@ -214,7 +245,80 @@
     const IS_EDIT = {% if is_edit %}true{% else %}false{% endif %};
     const HAS_EXISTING_COVER = {% if existing_cover_url %}true{% else %}false{% endif %};
 
+    const SUBGENRES_MAP = {{ subgenres_map|default:"[]"|safe }};
+
     document.addEventListener("DOMContentLoaded", function () {
+
+        // ── Chips de autores (apenas livros) ───────────────────────────
+        (function () {
+            const hidden   = document.querySelector('input[name="authors_names"]');
+            const chipsBox = document.getElementById("authorChips");
+            const input    = document.getElementById("authorInput");
+            const btnAdd   = document.getElementById("btnAddAuthor");
+            if (!hidden || !chipsBox || !input || !btnAdd) return;
+
+            let authors = (hidden.value || "").split("|").map(s => s.trim()).filter(Boolean);
+
+            function sync() {
+                hidden.value = authors.join("|");
+                chipsBox.innerHTML = "";
+                authors.forEach((name, i) => {
+                    const chip = document.createElement("span");
+                    chip.className = "slj-chip";
+                    chip.innerHTML = name +
+                        ' <button type="button" class="slj-chip-x" data-i="' + i +
+                        '" title="Remover"><span class="material-symbols-outlined">close</span></button>';
+                    chipsBox.appendChild(chip);
+                });
+            }
+
+            function addAuthor() {
+                const name = input.value.trim();
+                if (!name) return;
+                if (!authors.some(a => a.toLowerCase() === name.toLowerCase())) {
+                    authors.push(name);
+                    sync();
+                }
+                input.value = "";
+                input.focus();
+            }
+
+            btnAdd.addEventListener("click", addAuthor);
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") { e.preventDefault(); addAuthor(); }
+            });
+            chipsBox.addEventListener("click", (e) => {
+                const btn = e.target.closest(".slj-chip-x");
+                if (!btn) return;
+                authors.splice(parseInt(btn.dataset.i, 10), 1);
+                sync();
+            });
+
+            sync();
+        })();
+
+        // ── Filtro de subgêneros pelo gênero (form completo de livros) ─
+        (function () {
+            const genreInput = document.getElementById("id_genre_name");
+            const subgenreList = document.getElementById("list-subgenres");
+            if (!genreInput || !subgenreList || !SUBGENRES_MAP.length) return;
+
+            function rebuild() {
+                const g = genreInput.value.trim().toLowerCase();
+                subgenreList.innerHTML = "";
+                SUBGENRES_MAP
+                    .filter(s => !g || s.genre.toLowerCase() === g)
+                    .forEach(s => {
+                        const opt = document.createElement("option");
+                        opt.value = s.name;
+                        subgenreList.appendChild(opt);
+                    });
+            }
+
+            genreInput.addEventListener("input", rebuild);
+            genreInput.addEventListener("change", rebuild);
+            rebuild();
+        })();
 
         (function () {
             if (IS_COMPACT || IS_EDIT) return;
@@ -249,6 +353,13 @@
             const clearCover  = document.querySelector('input[name="clear_cover"]');
             const submitBtn   = document.getElementById("submitBtn");
             let hasExistingCover = HAS_EXISTING_COVER;
+
+            // Impede que o app.js do Unfold (fileInputUpdatePath) processe este
+            // input: ele escreveria o nome do arquivo no primeiro input[type=text]
+            // do form (o campo "Nome da edição"). O Unfold pula inputs marcados
+            // com esta flag, e nosso script (DOMContentLoaded) roda antes do
+            // dele (window.load).
+            fileInput.hasChangeListener = true;
 
             btnChoose.addEventListener("click", () => fileInput.click());
             preview.addEventListener("click", () => {
