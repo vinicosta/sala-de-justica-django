@@ -21,6 +21,11 @@ def _calc_date(anchor_date: date, steps: int, periodicity: Periodicity | None) -
     """
     Calcula a data estimada somando `steps` intervalos a partir de anchor_date.
     Se não houver periodicidade, usa 30 dias como default.
+
+    Aceita tanto o formato abreviado ("d", "w", "m", "y" — usado nos dados
+    migrados do MySQL/Laravel) quanto o formato por extenso ("day", "week",
+    "month", "year" — usado pelo cadastro novo de Periodicidades), no mesmo
+    padrão já adotado em views.py para a sugestão de data da "Nova edição".
     """
     if anchor_date is None:
         return None
@@ -28,16 +33,16 @@ def _calc_date(anchor_date: date, steps: int, periodicity: Periodicity | None) -
     if periodicity is None:
         return anchor_date + timedelta(days=30 * steps)
 
-    interval = periodicity.date_interval
+    interval = (periodicity.date_interval or "").strip().lower()
     n = periodicity.date_interval_number * steps
 
-    if interval == "day":
+    if interval in ("day", "d"):
         return anchor_date + timedelta(days=n)
-    elif interval == "week":
+    elif interval in ("week", "w"):
         return anchor_date + timedelta(weeks=n)
-    elif interval == "month":
+    elif interval in ("month", "m"):
         return anchor_date + relativedelta(months=n)
-    elif interval == "year":
+    elif interval in ("year", "y"):
         return anchor_date + relativedelta(years=n)
 
     return anchor_date + timedelta(days=30 * steps)

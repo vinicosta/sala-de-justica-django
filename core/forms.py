@@ -1,7 +1,7 @@
 # core/forms.py
 
 from django import forms
-from .models import Issue, Title, Author, Publisher, Periodicity, Format, Subgenre
+from .models import Issue, Title, Author, Publisher, Periodicity, Format, Genre, Subgenre, Type
 
 MONTH_CHOICES = [("", "Mês")] + [
     ("01", "Janeiro"), ("02", "Fevereiro"), ("03", "Março"),
@@ -305,4 +305,119 @@ class TitleEditForm(forms.Form):
             "list": "list-formats",
             "autocomplete": "off",
         }),
+    )
+
+
+class AuthorForm(forms.Form):
+    """Form de criação/edição de Autor — usado nas telas custom de cadastro."""
+
+    name = forms.CharField(
+        label="Nome do autor",
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            "class": "slj-input",
+            "placeholder": "Nome completo do autor",
+            "autocomplete": "off",
+            "autofocus": True,
+        }),
+    )
+
+
+class PublisherForm(forms.Form):
+    """Form de criação/edição de Editora — usado nas telas custom de cadastro."""
+
+    name = forms.CharField(
+        label="Nome da editora",
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            "class": "slj-input",
+            "placeholder": "Nome da editora",
+            "autocomplete": "off",
+            "autofocus": True,
+        }),
+    )
+
+
+class FormatForm(forms.Form):
+    """Form de criação/edição de Formato — usado nas telas custom de cadastro."""
+
+    name = forms.CharField(
+        label="Nome do formato",
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            "class": "slj-input",
+            "placeholder": "Ex: Capa dura, Encadernado, Digital",
+            "autocomplete": "off",
+            "autofocus": True,
+        }),
+    )
+    type = forms.ModelChoiceField(
+        label="Tipo",
+        queryset=Type.objects.order_by("name"),
+        empty_label=None,
+        widget=forms.Select(attrs={"class": "slj-select"}),
+    )
+
+
+class GenreForm(forms.Form):
+    """Form de criação/edição de Gênero — usado nas telas custom de cadastro."""
+
+    name = forms.CharField(
+        label="Nome do gênero",
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            "class": "slj-input",
+            "placeholder": "Ex: Super-heróis, Terror, Fantasia",
+            "autocomplete": "off",
+            "autofocus": True,
+        }),
+    )
+
+
+class SubgenreForm(forms.Form):
+    """Form de criação/edição de Subgênero — usado nas telas custom de cadastro."""
+
+    name = forms.CharField(
+        label="Nome do subgênero",
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            "class": "slj-input",
+            "placeholder": "Ex: Vigilantes urbanos, Sword and sorcery",
+            "autocomplete": "off",
+            "autofocus": True,
+        }),
+    )
+    genre = forms.ModelChoiceField(
+        label="Gênero",
+        queryset=Genre.objects.order_by("name"),
+        empty_label=None,
+        widget=forms.Select(attrs={"class": "slj-select"}),
+    )
+
+
+class PeriodicityForm(forms.Form):
+    """Form de criação/edição de Periodicidade — usado nas telas custom de cadastro."""
+
+    name = forms.CharField(
+        label="Nome",
+        max_length=255,
+        widget=forms.TextInput(attrs={
+            "class": "slj-input",
+            "placeholder": "Ex: Mensal, Bimestral, Quinzenal",
+            "autocomplete": "off",
+            "autofocus": True,
+        }),
+    )
+    date_interval_number = forms.IntegerField(
+        label="A cada",
+        min_value=1,
+        widget=forms.NumberInput(attrs={
+            "class": "slj-input",
+            "min": "1",
+        }),
+    )
+    date_interval = forms.ChoiceField(
+        label="Unidade",
+        choices=Periodicity.INTERVAL_CHOICES,
+        widget=forms.Select(attrs={"class": "slj-select"}),
     )

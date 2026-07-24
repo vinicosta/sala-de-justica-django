@@ -1,0 +1,62 @@
+{# templates/core/publisher_form.html #}
+{% extends "unfold/layouts/base_simple.html" %}
+{% load static i18n %}
+
+{% block title %}{% if is_create %}Nova editora{% else %}Editar editora — {{ publisher.name }}{% endif %} — Sala de Justiça{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'core/app.css' %}">
+{% endblock %}
+
+{% block content_before %}
+<div class="bg-white border-b border-base-200 dark:bg-base-900 dark:border-base-800 px-4 mb-6 z-40">
+    <div class="container mx-auto flex items-center h-16 gap-4">
+        <a href="{{ back_url }}" class="slj-btn-back">
+            <span class="material-symbols-outlined">arrow_back</span>
+            Editoras
+        </a>
+        <h1 class="slj-page-title ml-2">
+            {% if is_create %}Nova editora{% else %}Editar editora{% endif %}
+        </h1>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+<div class="slj-messages">
+    {% for msg in messages %}
+    <div class="slj-message slj-message--{{ msg.tags }}">
+        <span class="material-symbols-outlined">check_circle</span>{{ msg }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="slj-form-wrap">
+    <form method="post" class="slj-form" novalidate autocomplete="off">
+        {% csrf_token %}
+
+        <section class="slj-form-section">
+            <h2 class="slj-form-section-title">Editora</h2>
+
+            <div class="slj-field">
+                <label class="slj-label">Nome <span class="slj-required">*</span></label>
+                {{ form.name }}
+                {% if form.name.errors %}<p class="slj-field-error">{{ form.name.errors.0 }}</p>{% endif %}
+            </div>
+        </section>
+
+        <div class="slj-form-actions">
+            <a href="{{ back_url }}" class="btn btn-ghost">Cancelar</a>
+            <button type="submit" class="slj-btn-submit" id="submitBtn">
+                <span class="material-symbols-outlined">save</span>
+                {% if is_create %}Criar editora{% else %}Salvar alterações{% endif %}
+            </button>
+        </div>
+
+    </form>
+</div>
+
+{% endblock %}

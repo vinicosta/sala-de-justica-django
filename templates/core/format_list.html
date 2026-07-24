@@ -1,0 +1,153 @@
+{# templates/core/format_list.html #}
+{% extends "unfold/layouts/base_simple.html" %}
+{% load static i18n %}
+
+{% block title %}Formatos — Sala de Justiça{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'core/app.css' %}">
+{% endblock %}
+
+{% block content_before %}
+<div class="bg-white border-b border-base-200 dark:bg-base-900 dark:border-base-800 px-4 mb-6 z-40">
+    <div class="container mx-auto flex items-center h-16 gap-4">
+        <h1 class="slj-page-title">Formatos</h1>
+        <div class="ml-auto flex items-center gap-3">
+
+            <form method="get" class="search-form" id="searchForm">
+                <div class="search-wrap">
+                    <span class="material-symbols-outlined search-icon">search</span>
+                    <input type="search" name="q" value="{{ q }}"
+                        placeholder="Pesquisar formato ou tipo…"
+                        class="search-input" autocomplete="off" id="searchInput" />
+                    {% if q %}
+                    <a href="{% url 'formatos' %}" class="search-clear" title="Limpar">
+                        <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+
+            <a href="{% url 'formato_create' %}" class="slj-btn-new" title="Novo formato">
+                <span class="material-symbols-outlined">add_circle</span>
+                <span class="slj-btn-new-label">Novo formato</span>
+            </a>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+<div class="slj-messages">
+    {% for msg in messages %}
+    <div class="slj-message slj-message--{{ msg.tags }}">
+        <span class="material-symbols-outlined">check_circle</span>{{ msg }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="list-meta">
+    {% if is_search %}
+    Formatos encontrados — <strong>{{ total }}</strong>
+    {% if total == 1 %}formato{% else %}formatos{% endif %}
+    para <span class="search-tag">{{ q }}</span>
+    {% else %}
+    <strong>{{ total }}</strong> {% if total == 1 %}formato cadastrado{% else %}formatos cadastrados{% endif %}
+    {% endif %}
+</div>
+
+{% if formats %}
+<div class="slj-cadastro-list">
+    {% for format in formats %}
+    <div class="slj-cadastro-row">
+        <div class="slj-cadastro-icon">
+            <span class="material-symbols-outlined">style</span>
+        </div>
+        <div class="slj-cadastro-info">
+            <p class="slj-cadastro-name">
+                {{ format.name }}
+                {% if format.type.name == "Quadrinhos" %}
+                <span class="slj-type-badge slj-type-badge--quadrinhos">
+                    <span class="material-symbols-outlined">comic_bubble</span>{{ format.type.name }}
+                </span>
+                {% elif format.type.name == "Livros" %}
+                <span class="slj-type-badge slj-type-badge--livros">
+                    <span class="material-symbols-outlined">menu_book</span>{{ format.type.name }}
+                </span>
+                {% else %}
+                <span class="slj-type-badge slj-type-badge--revistas">
+                    <span class="material-symbols-outlined">newspaper</span>{{ format.type.name }}
+                </span>
+                {% endif %}
+            </p>
+            <p class="slj-cadastro-meta">
+                {{ format.titles_count }} {% if format.titles_count == 1 %}título{% else %}títulos{% endif %}
+            </p>
+        </div>
+        <div class="slj-cadastro-actions">
+            <a href="{% url 'formato_edit' format.pk %}" class="action-pill action-pill--edit" title="Editar formato">
+                <span class="material-symbols-outlined">edit</span>
+            </a>
+            <button class="action-pill action-pill--delete" title="Excluir formato"
+                onclick="confirmDeleteFormat({{ format.pk }}, '{{ format.name|escapejs }}')">
+                <span class="material-symbols-outlined">delete</span>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <span class="material-symbols-outlined empty-icon">
+        {% if is_search %}search_off{% else %}style{% endif %}
+    </span>
+    <p>
+        {% if is_search %}
+        Nenhum formato encontrado para "{{ q }}".
+        {% else %}
+        Nenhum formato cadastrado.
+        {% endif %}
+    </p>
+</div>
+{% endif %}
+
+{# Modal de confirmação #}
+<div class="modal-backdrop" id="confirmModal" style="display:none">
+    <div class="modal">
+        <p class="modal-msg" id="confirmMsg"></p>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+            <form method="post" id="deleteFormatForm" style="display:contents">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Confirmar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extrahead %}
+<script>
+    function confirmDeleteFormat(formatId, formatName) {
+        document.getElementById("confirmMsg").textContent =
+            'Excluir o formato "' + formatName + '" permanentemente? Esta ação não pode ser desfeita.';
+        document.getElementById("deleteFormatForm").action = "/formatos/" + formatId + "/excluir/";
+        document.getElementById("confirmModal").style.display = "flex";
+    }
+
+    function closeModal() {
+        document.getElementById("confirmModal").style.display = "none";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("keydown", e => {
+            if (e.key === "Escape") closeModal();
+        });
+    });
+</script>
+{% endblock %}

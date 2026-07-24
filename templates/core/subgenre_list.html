@@ -1,0 +1,141 @@
+{# templates/core/subgenre_list.html #}
+{% extends "unfold/layouts/base_simple.html" %}
+{% load static i18n %}
+
+{% block title %}Subgêneros — Sala de Justiça{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'core/app.css' %}">
+{% endblock %}
+
+{% block content_before %}
+<div class="bg-white border-b border-base-200 dark:bg-base-900 dark:border-base-800 px-4 mb-6 z-40">
+    <div class="container mx-auto flex items-center h-16 gap-4">
+        <h1 class="slj-page-title">Subgêneros</h1>
+        <div class="ml-auto flex items-center gap-3">
+
+            <form method="get" class="search-form" id="searchForm">
+                <div class="search-wrap">
+                    <span class="material-symbols-outlined search-icon">search</span>
+                    <input type="search" name="q" value="{{ q }}"
+                        placeholder="Pesquisar subgênero ou gênero…"
+                        class="search-input" autocomplete="off" id="searchInput" />
+                    {% if q %}
+                    <a href="{% url 'subgeneros' %}" class="search-clear" title="Limpar">
+                        <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+
+            <a href="{% url 'subgenero_create' %}" class="slj-btn-new" title="Novo subgênero">
+                <span class="material-symbols-outlined">add_circle</span>
+                <span class="slj-btn-new-label">Novo subgênero</span>
+            </a>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+<div class="slj-messages">
+    {% for msg in messages %}
+    <div class="slj-message slj-message--{{ msg.tags }}">
+        <span class="material-symbols-outlined">{% if msg.tags == "error" %}error{% else %}check_circle{% endif %}</span>{{ msg }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="list-meta">
+    {% if is_search %}
+    Subgêneros encontrados — <strong>{{ total }}</strong>
+    {% if total == 1 %}subgênero{% else %}subgêneros{% endif %}
+    para <span class="search-tag">{{ q }}</span>
+    {% else %}
+    <strong>{{ total }}</strong> {% if total == 1 %}subgênero cadastrado{% else %}subgêneros cadastrados{% endif %}
+    {% endif %}
+</div>
+
+{% if subgenres %}
+<div class="slj-cadastro-list">
+    {% for subgenre in subgenres %}
+    <div class="slj-cadastro-row">
+        <div class="slj-cadastro-icon">
+            <span class="material-symbols-outlined">sell</span>
+        </div>
+        <div class="slj-cadastro-info">
+            <p class="slj-cadastro-name">
+                {{ subgenre.name }}
+                <span class="slj-genre-badge">{{ subgenre.genre.name }}</span>
+            </p>
+            <p class="slj-cadastro-meta">
+                {{ subgenre.titles_count }} {% if subgenre.titles_count == 1 %}título{% else %}títulos{% endif %}
+            </p>
+        </div>
+        <div class="slj-cadastro-actions">
+            <a href="{% url 'subgenero_edit' subgenre.pk %}" class="action-pill action-pill--edit" title="Editar subgênero">
+                <span class="material-symbols-outlined">edit</span>
+            </a>
+            <button class="action-pill action-pill--delete" title="Excluir subgênero"
+                onclick="confirmDeleteSubgenre({{ subgenre.pk }}, '{{ subgenre.name|escapejs }}')">
+                <span class="material-symbols-outlined">delete</span>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <span class="material-symbols-outlined empty-icon">
+        {% if is_search %}search_off{% else %}sell{% endif %}
+    </span>
+    <p>
+        {% if is_search %}
+        Nenhum subgênero encontrado para "{{ q }}".
+        {% else %}
+        Nenhum subgênero cadastrado.
+        {% endif %}
+    </p>
+</div>
+{% endif %}
+
+{# Modal de confirmação #}
+<div class="modal-backdrop" id="confirmModal" style="display:none">
+    <div class="modal">
+        <p class="modal-msg" id="confirmMsg"></p>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+            <form method="post" id="deleteSubgenreForm" style="display:contents">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Confirmar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extrahead %}
+<script>
+    function confirmDeleteSubgenre(subgenreId, subgenreName) {
+        document.getElementById("confirmMsg").textContent =
+            'Excluir o subgênero "' + subgenreName + '" permanentemente? Esta ação não pode ser desfeita.';
+        document.getElementById("deleteSubgenreForm").action = "/subgeneros/" + subgenreId + "/excluir/";
+        document.getElementById("confirmModal").style.display = "flex";
+    }
+
+    function closeModal() {
+        document.getElementById("confirmModal").style.display = "none";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("keydown", e => {
+            if (e.key === "Escape") closeModal();
+        });
+    });
+</script>
+{% endblock %}

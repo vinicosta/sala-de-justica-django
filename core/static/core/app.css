@@ -1353,3 +1353,213 @@
 .slj-message .material-symbols-outlined {
     font-size: 18px;
 }
+/* ── Listagem de Autores ─────────────────────────────────────────────────── */
+.slj-author-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.slj-author-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--slj-bg-card);
+    border: 1px solid var(--slj-border);
+    border-radius: var(--slj-radius);
+    transition: border-color var(--slj-transition), background var(--slj-transition);
+}
+
+.slj-author-row:hover {
+    border-color: var(--slj-accent);
+    background: var(--slj-bg-subtle);
+}
+
+.slj-author-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--slj-accent-soft);
+    color: var(--slj-accent-hover);
+}
+
+.slj-author-avatar .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.slj-author-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.slj-author-name {
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--slj-text);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.slj-author-meta {
+    font-size: .78rem;
+    color: var(--slj-text-muted);
+    margin: 2px 0 0;
+}
+
+.slj-author-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ── Listagem de Cadastros (Editoras, Formatos, etc.) ───────────────────────
+   Genérico — mesmo padrão visual de .slj-author-row, reutilizável por
+   qualquer cadastro simples em lista (sem capa). */
+.slj-cadastro-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.slj-cadastro-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--slj-bg-card);
+    border: 1px solid var(--slj-border);
+    border-radius: var(--slj-radius);
+    transition: border-color var(--slj-transition), background var(--slj-transition);
+}
+
+.slj-cadastro-row:hover {
+    border-color: var(--slj-accent);
+    background: var(--slj-bg-subtle);
+}
+
+.slj-cadastro-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--slj-accent-soft);
+    color: var(--slj-accent-hover);
+}
+
+.slj-cadastro-icon .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.slj-cadastro-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.slj-cadastro-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--slj-text);
+    margin: 0;
+}
+
+.slj-cadastro-meta {
+    font-size: .78rem;
+    color: var(--slj-text-muted);
+    margin: 2px 0 0;
+}
+
+.slj-cadastro-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ── Selo de tipo (Quadrinhos/Livros/Revistas) ───────────────────────────── */
+.slj-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.slj-type-badge .material-symbols-outlined {
+    font-size: 14px;
+}
+
+.slj-type-badge--quadrinhos {
+    background: var(--slj-accent-soft);
+    color: var(--slj-accent-hover);
+}
+
+.slj-type-badge--livros {
+    background: var(--slj-green-soft);
+    color: var(--slj-green);
+}
+
+.slj-type-badge--revistas {
+    background: rgba(245, 158, 11, .15);
+    color: #f59e0b;
+}
+
+/* ── Mensagem de erro (flash) ────────────────────────────────────────────── */
+.slj-message--error {
+    background: rgba(239, 68, 68, .12);
+    color: var(--slj-red);
+    border: 1px solid var(--slj-red);
+}
+
+/* ── Selo de gênero fixo do sistema (não editável/excluível) ────────────── */
+.slj-lock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 600;
+    background: var(--slj-bg-subtle);
+    color: var(--slj-text-muted);
+    border: 1px solid var(--slj-border);
+}
+
+.slj-lock-badge .material-symbols-outlined {
+    font-size: 14px;
+}
+
+.action-pill--locked {
+    background: var(--slj-bg-subtle);
+    color: var(--slj-text-muted);
+    cursor: not-allowed;
+}
+
+/* ── Selo genérico de gênero (usado na listagem de Subgêneros) ───────────── */
+.slj-genre-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 600;
+    background: var(--slj-accent-soft);
+    color: var(--slj-accent-hover);
+    white-space: nowrap;
+}

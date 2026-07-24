@@ -154,17 +154,32 @@ UNFOLD = {
                     {
                         "title": "Autores",
                         "icon": "person",
-                        "link": "/admin/core/author/",
+                        "link": "/autores/",
                     },
                     {
                         "title": "Editoras",
                         "icon": "business",
-                        "link": "/admin/core/publisher/",
+                        "link": "/editoras/",
+                    },
+                    {
+                        "title": "Formatos",
+                        "icon": "style",
+                        "link": "/formatos/",
                     },
                     {
                         "title": "Gêneros",
                         "icon": "category",
-                        "link": "/admin/core/genre/",
+                        "link": "/generos/",
+                    },
+                    {
+                        "title": "Subgêneros",
+                        "icon": "sell",
+                        "link": "/subgeneros/",
+                    },
+                    {
+                        "title": "Periodicidades",
+                        "icon": "event_repeat",
+                        "link": "/periodicidades/",
                     },
                 ],
             },

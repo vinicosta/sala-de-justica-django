@@ -3,18 +3,22 @@
 import json, random, unicodedata, re
 from datetime import date
 
+from django.contrib import messages
 from django.contrib.admin import site as admin_site
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_POST
 
-from .forms import IssueCompactForm, IssueFullForm
+from .forms import (
+    AuthorForm, FormatForm, GenreForm, IssueCompactForm, IssueFullForm,
+    PeriodicityForm, PublisherForm, SubgenreForm,
+)
 from .models import (
     Author, CollectionItem, Format, Genre, Issue, Periodicity,
-    Publisher, ReadItem, ReadingList, Subgenre, Title,
+    Publisher, ReadItem, ReadingList, Subgenre, Title, Type,
 )
 from .gap_detection import fill_gaps
 
@@ -23,6 +27,16 @@ from .gap_detection import fill_gaps
 
 def _type_slug(type_id: int) -> str:
     return {1: "quadrinhos", 2: "livros", 3: "revistas"}.get(type_id, "quadrinhos")
+
+
+# Gêneros fixos do sistema — usados para classificar o próprio acervo de
+# Quadrinhos e Revistas (não representam gêneros narrativos de verdade e por
+# isso não podem ser renomeados nem excluídos pelas telas de cadastro).
+PROTECTED_GENRE_NAMES = {"quadrinhos", "revistas"}
+
+
+def _is_protected_genre(genre) -> bool:
+    return genre.name.strip().lower() in PROTECTED_GENRE_NAMES
 
 
 def _ordered_issues_for_title(title_id: int):
@@ -822,3 +836,565 @@ def sortear_livro(request):
         return redirect("livros")
     escolhido = random.choice(next_ids)
     return redirect("livros_detail", issue_id=escolhido)
+
+# ── Cadastro de Autores ────────────────────────────────────────────────────
+
+@login_required
+def author_list(request):
+    """Listagem de autores no mesmo padrão visual das telas de acervo,
+    com caixa de busca (nome, acento-insensível) e contagem de edições."""
+    q = request.GET.get("q", "").strip()
+
+    authors = Author.objects.annotate(issues_count=Count("issues", distinct=True))
+    if q:
+        authors = authors.filter(_icontains_normalized("name", q))
+    authors = authors.order_by("name")
+
+    context = _admin_context(request)
+    context.update({
+        "authors": authors,
+        "total":   authors.count(),
+        "q":       q,
+        "is_search": bool(q),
+    })
+    return render(request, "core/author_list.html", context)
+
+
+@login_required
+def author_create(request):
+    back_url = "/autores/"
+
+    if request.method == "POST":
+        form = AuthorForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            if Author.objects.filter(name__iexact=name).exists():
+                form.add_error("name", "Já existe um autor com esse nome.")
+            else:
+                Author.objects.create(name=name)
+                messages.success(request, f'Autor "{name}" criado com sucesso.')
+                return redirect(back_url)
+    else:
+        form = AuthorForm()
+
+    context = _admin_context(request)
+    context.update({
+        "form":       form,
+        "back_url":   back_url,
+        "is_create":  True,
+    })
+    return render(request, "core/author_form.html", context)
+
+
+@login_required
+def author_edit(request, author_id: int):
+    author = get_object_or_404(Author, pk=author_id)
+    back_url = "/autores/"
+
+    if request.method == "POST":
+        form = AuthorForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            if Author.objects.filter(name__iexact=name).exclude(pk=author.pk).exists():
+                form.add_error("name", "Já existe um autor com esse nome.")
+            else:
+                author.name = name
+                author.save()
+                messages.success(request, f'Autor "{name}" atualizado com sucesso.')
+                return redirect(back_url)
+    else:
+        form = AuthorForm(initial={"name": author.name})
+
+    context = _admin_context(request)
+    context.update({
+        "form":       form,
+        "author":     author,
+        "back_url":   back_url,
+        "is_create":  False,
+    })
+    return render(request, "core/author_form.html", context)
+
+
+@require_POST
+@login_required
+def author_delete(request, author_id: int):
+    author = get_object_or_404(Author, pk=author_id)
+    name = author.name
+    author.delete()
+    messages.success(request, f'Autor "{name}" excluído com sucesso.')
+    return redirect("/autores/")
+
+
+# ── Cadastro de Editoras ────────────────────────────────────────────────────
+
+@login_required
+def publisher_list(request):
+    """Listagem de editoras no mesmo padrão visual do cadastro de autores."""
+    q = request.GET.get("q", "").strip()
+
+    publishers = Publisher.objects.annotate(titles_count=Count("titles", distinct=True))
+    if q:
+        publishers = publishers.filter(_icontains_normalized("name", q))
+    publishers = publishers.order_by("name")
+
+    context = _admin_context(request)
+    context.update({
+        "publishers": publishers,
+        "total":      publishers.count(),
+        "q":          q,
+        "is_search":  bool(q),
+    })
+    return render(request, "core/publisher_list.html", context)
+
+
+@login_required
+def publisher_create(request):
+    back_url = "/editoras/"
+
+    if request.method == "POST":
+        form = PublisherForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            if Publisher.objects.filter(name__iexact=name).exists():
+                form.add_error("name", "Já existe uma editora com esse nome.")
+            else:
+                Publisher.objects.create(name=name)
+                messages.success(request, f'Editora "{name}" criada com sucesso.')
+                return redirect(back_url)
+    else:
+        form = PublisherForm()
+
+    context = _admin_context(request)
+    context.update({
+        "form":      form,
+        "back_url":  back_url,
+        "is_create": True,
+    })
+    return render(request, "core/publisher_form.html", context)
+
+
+@login_required
+def publisher_edit(request, publisher_id: int):
+    publisher = get_object_or_404(Publisher, pk=publisher_id)
+    back_url = "/editoras/"
+
+    if request.method == "POST":
+        form = PublisherForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            if Publisher.objects.filter(name__iexact=name).exclude(pk=publisher.pk).exists():
+                form.add_error("name", "Já existe uma editora com esse nome.")
+            else:
+                publisher.name = name
+                publisher.save()
+                messages.success(request, f'Editora "{name}" atualizada com sucesso.')
+                return redirect(back_url)
+    else:
+        form = PublisherForm(initial={"name": publisher.name})
+
+    context = _admin_context(request)
+    context.update({
+        "form":      form,
+        "publisher": publisher,
+        "back_url":  back_url,
+        "is_create": False,
+    })
+    return render(request, "core/publisher_form.html", context)
+
+
+@require_POST
+@login_required
+def publisher_delete(request, publisher_id: int):
+    publisher = get_object_or_404(Publisher, pk=publisher_id)
+    name = publisher.name
+    publisher.delete()
+    messages.success(request, f'Editora "{name}" excluída com sucesso.')
+    return redirect("/editoras/")
+
+
+# ── Cadastro de Formatos ─────────────────────────────────────────────────────
+
+@login_required
+def format_list(request):
+    """Listagem de formatos no mesmo padrão visual do cadastro de autores,
+    com selo indicando o tipo (Quadrinhos/Livros/Revistas) de cada formato."""
+    q = request.GET.get("q", "").strip()
+
+    formats = Format.objects.select_related("type").annotate(
+        titles_count=Count("titles", distinct=True)
+    )
+    if q:
+        formats = formats.filter(
+            _icontains_normalized("name", q) | _icontains_normalized("type__name", q)
+        )
+    formats = formats.order_by("type__name", "name")
+
+    context = _admin_context(request)
+    context.update({
+        "formats":   formats,
+        "total":     formats.count(),
+        "q":         q,
+        "is_search": bool(q),
+    })
+    return render(request, "core/format_list.html", context)
+
+
+@login_required
+def format_create(request):
+    back_url = "/formatos/"
+
+    if request.method == "POST":
+        form = FormatForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            type_obj = form.cleaned_data["type"]
+            if Format.objects.filter(name__iexact=name, type=type_obj).exists():
+                form.add_error("name", "Já existe um formato com esse nome para este tipo.")
+            else:
+                Format.objects.create(name=name, type=type_obj)
+                messages.success(request, f'Formato "{name}" criado com sucesso.')
+                return redirect(back_url)
+    else:
+        form = FormatForm()
+
+    context = _admin_context(request)
+    context.update({
+        "form":      form,
+        "back_url":  back_url,
+        "is_create": True,
+    })
+    return render(request, "core/format_form.html", context)
+
+
+@login_required
+def format_edit(request, format_id: int):
+    fmt = get_object_or_404(Format, pk=format_id)
+    back_url = "/formatos/"
+
+    if request.method == "POST":
+        form = FormatForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            type_obj = form.cleaned_data["type"]
+            if Format.objects.filter(name__iexact=name, type=type_obj).exclude(pk=fmt.pk).exists():
+                form.add_error("name", "Já existe um formato com esse nome para este tipo.")
+            else:
+                fmt.name = name
+                fmt.type = type_obj
+                fmt.save()
+                messages.success(request, f'Formato "{name}" atualizado com sucesso.')
+                return redirect(back_url)
+    else:
+        form = FormatForm(initial={"name": fmt.name, "type": fmt.type_id})
+
+    context = _admin_context(request)
+    context.update({
+        "form":      form,
+        "format":    fmt,
+        "back_url":  back_url,
+        "is_create": False,
+    })
+    return render(request, "core/format_form.html", context)
+
+
+@require_POST
+@login_required
+def format_delete(request, format_id: int):
+    fmt = get_object_or_404(Format, pk=format_id)
+    name = fmt.name
+    fmt.delete()
+    messages.success(request, f'Formato "{name}" excluído com sucesso.')
+    return redirect("/formatos/")
+
+
+# ── Cadastro de Gêneros ──────────────────────────────────────────────────────
+
+@login_required
+def genre_list(request):
+    """Listagem de gêneros no mesmo padrão visual do cadastro de editoras.
+    Os gêneros fixos do sistema ("Quadrinhos" e "Revistas") aparecem com um
+    cadeado no lugar dos botões de editar/excluir."""
+    q = request.GET.get("q", "").strip()
+
+    genres_qs = Genre.objects.annotate(titles_count=Count("titles", distinct=True))
+    if q:
+        genres_qs = genres_qs.filter(_icontains_normalized("name", q))
+    genres = list(genres_qs.order_by("name"))
+    for g in genres:
+        g.is_protected = _is_protected_genre(g)
+
+    context = _admin_context(request)
+    context.update({
+        "genres":    genres,
+        "total":     len(genres),
+        "q":         q,
+        "is_search": bool(q),
+    })
+    return render(request, "core/genre_list.html", context)
+
+
+@login_required
+def genre_create(request):
+    back_url = "/generos/"
+
+    if request.method == "POST":
+        form = GenreForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            if Genre.objects.filter(name__iexact=name).exists():
+                form.add_error("name", "Já existe um gênero com esse nome.")
+            else:
+                Genre.objects.create(name=name)
+                messages.success(request, f'Gênero "{name}" criado com sucesso.')
+                return redirect(back_url)
+    else:
+        form = GenreForm()
+
+    context = _admin_context(request)
+    context.update({
+        "form":      form,
+        "back_url":  back_url,
+        "is_create": True,
+    })
+    return render(request, "core/genre_form.html", context)
+
+
+@login_required
+def genre_edit(request, genre_id: int):
+    genre = get_object_or_404(Genre, pk=genre_id)
+    back_url = "/generos/"
+
+    if _is_protected_genre(genre):
+        messages.error(request, f'O gênero "{genre.name}" é fixo do sistema e não pode ser editado.')
+        return redirect(back_url)
+
+    if request.method == "POST":
+        form = GenreForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            if Genre.objects.filter(name__iexact=name).exclude(pk=genre.pk).exists():
+                form.add_error("name", "Já existe um gênero com esse nome.")
+            else:
+                genre.name = name
+                genre.save()
+                messages.success(request, f'Gênero "{name}" atualizado com sucesso.')
+                return redirect(back_url)
+    else:
+        form = GenreForm(initial={"name": genre.name})
+
+    context = _admin_context(request)
+    context.update({
+        "form":      form,
+        "genre":     genre,
+        "back_url":  back_url,
+        "is_create": False,
+    })
+    return render(request, "core/genre_form.html", context)
+
+
+@require_POST
+@login_required
+def genre_delete(request, genre_id: int):
+    genre = get_object_or_404(Genre, pk=genre_id)
+
+    if _is_protected_genre(genre):
+        messages.error(request, f'O gênero "{genre.name}" é fixo do sistema e não pode ser excluído.')
+        return redirect("/generos/")
+
+    name = genre.name
+    genre.delete()
+    messages.success(request, f'Gênero "{name}" excluído com sucesso.')
+    return redirect("/generos/")
+
+
+# ── Cadastro de Subgêneros ───────────────────────────────────────────────────
+
+@login_required
+def subgenre_list(request):
+    """Listagem de subgêneros no mesmo padrão visual do cadastro de formatos,
+    com selo indicando o gênero de cada subgênero."""
+    q = request.GET.get("q", "").strip()
+
+    subgenres = Subgenre.objects.select_related("genre").annotate(
+        titles_count=Count("titles", distinct=True)
+    )
+    if q:
+        subgenres = subgenres.filter(
+            _icontains_normalized("name", q) | _icontains_normalized("genre__name", q)
+        )
+    subgenres = subgenres.order_by("genre__name", "name")
+
+    context = _admin_context(request)
+    context.update({
+        "subgenres": subgenres,
+        "total":     subgenres.count(),
+        "q":         q,
+        "is_search": bool(q),
+    })
+    return render(request, "core/subgenre_list.html", context)
+
+
+@login_required
+def subgenre_create(request):
+    back_url = "/subgeneros/"
+
+    if request.method == "POST":
+        form = SubgenreForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            genre_obj = form.cleaned_data["genre"]
+            if Subgenre.objects.filter(name__iexact=name, genre=genre_obj).exists():
+                form.add_error("name", "Já existe um subgênero com esse nome para este gênero.")
+            else:
+                Subgenre.objects.create(name=name, genre=genre_obj)
+                messages.success(request, f'Subgênero "{name}" criado com sucesso.')
+                return redirect(back_url)
+    else:
+        form = SubgenreForm()
+
+    context = _admin_context(request)
+    context.update({
+        "form":      form,
+        "back_url":  back_url,
+        "is_create": True,
+    })
+    return render(request, "core/subgenre_form.html", context)
+
+
+@login_required
+def subgenre_edit(request, subgenre_id: int):
+    subgenre = get_object_or_404(Subgenre, pk=subgenre_id)
+    back_url = "/subgeneros/"
+
+    if request.method == "POST":
+        form = SubgenreForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            genre_obj = form.cleaned_data["genre"]
+            if Subgenre.objects.filter(name__iexact=name, genre=genre_obj).exclude(pk=subgenre.pk).exists():
+                form.add_error("name", "Já existe um subgênero com esse nome para este gênero.")
+            else:
+                subgenre.name = name
+                subgenre.genre = genre_obj
+                subgenre.save()
+                messages.success(request, f'Subgênero "{name}" atualizado com sucesso.')
+                return redirect(back_url)
+    else:
+        form = SubgenreForm(initial={"name": subgenre.name, "genre": subgenre.genre_id})
+
+    context = _admin_context(request)
+    context.update({
+        "form":      form,
+        "subgenre":  subgenre,
+        "back_url":  back_url,
+        "is_create": False,
+    })
+    return render(request, "core/subgenre_form.html", context)
+
+
+@require_POST
+@login_required
+def subgenre_delete(request, subgenre_id: int):
+    subgenre = get_object_or_404(Subgenre, pk=subgenre_id)
+    name = subgenre.name
+    subgenre.delete()
+    messages.success(request, f'Subgênero "{name}" excluído com sucesso.')
+    return redirect("/subgeneros/")
+
+
+# ── Cadastro de Periodicidades ───────────────────────────────────────────────
+
+@login_required
+def periodicity_list(request):
+    """Listagem de periodicidades no mesmo padrão visual do cadastro de editoras,
+    exibindo o intervalo (ex: "a cada 2 Mês(es)") e a contagem de títulos."""
+    q = request.GET.get("q", "").strip()
+
+    periodicities = Periodicity.objects.annotate(titles_count=Count("titles", distinct=True))
+    if q:
+        periodicities = periodicities.filter(_icontains_normalized("name", q))
+    periodicities = periodicities.order_by("name")
+
+    context = _admin_context(request)
+    context.update({
+        "periodicities": periodicities,
+        "total":         periodicities.count(),
+        "q":             q,
+        "is_search":     bool(q),
+    })
+    return render(request, "core/periodicity_list.html", context)
+
+
+@login_required
+def periodicity_create(request):
+    back_url = "/periodicidades/"
+
+    if request.method == "POST":
+        form = PeriodicityForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            if Periodicity.objects.filter(name__iexact=name).exists():
+                form.add_error("name", "Já existe uma periodicidade com esse nome.")
+            else:
+                Periodicity.objects.create(
+                    name=name,
+                    date_interval_number=form.cleaned_data["date_interval_number"],
+                    date_interval=form.cleaned_data["date_interval"],
+                )
+                messages.success(request, f'Periodicidade "{name}" criada com sucesso.')
+                return redirect(back_url)
+    else:
+        form = PeriodicityForm(initial={"date_interval_number": 1, "date_interval": "month"})
+
+    context = _admin_context(request)
+    context.update({
+        "form":      form,
+        "back_url":  back_url,
+        "is_create": True,
+    })
+    return render(request, "core/periodicity_form.html", context)
+
+
+@login_required
+def periodicity_edit(request, periodicity_id: int):
+    periodicity = get_object_or_404(Periodicity, pk=periodicity_id)
+    back_url = "/periodicidades/"
+
+    if request.method == "POST":
+        form = PeriodicityForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data["name"].strip()
+            if Periodicity.objects.filter(name__iexact=name).exclude(pk=periodicity.pk).exists():
+                form.add_error("name", "Já existe uma periodicidade com esse nome.")
+            else:
+                periodicity.name = name
+                periodicity.date_interval_number = form.cleaned_data["date_interval_number"]
+                periodicity.date_interval = form.cleaned_data["date_interval"]
+                periodicity.save()
+                messages.success(request, f'Periodicidade "{name}" atualizada com sucesso.')
+                return redirect(back_url)
+    else:
+        form = PeriodicityForm(initial={
+            "name":                 periodicity.name,
+            "date_interval_number": periodicity.date_interval_number,
+            "date_interval":        periodicity.date_interval,
+        })
+
+    context = _admin_context(request)
+    context.update({
+        "form":        form,
+        "periodicity": periodicity,
+        "back_url":    back_url,
+        "is_create":   False,
+    })
+    return render(request, "core/periodicity_form.html", context)
+
+
+@require_POST
+@login_required
+def periodicity_delete(request, periodicity_id: int):
+    periodicity = get_object_or_404(Periodicity, pk=periodicity_id)
+    name = periodicity.name
+    periodicity.delete()
+    messages.success(request, f'Periodicidade "{name}" excluída com sucesso.')
+    return redirect("/periodicidades/")
