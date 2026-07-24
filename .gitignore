@@ -47,3 +47,4 @@ media/magazines/
 # OS
 .DS_Store
 Thumbs.db
+sync_dry_run.txt

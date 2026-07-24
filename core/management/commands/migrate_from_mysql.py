@@ -1,3 +1,17 @@
+"""
+core/management/commands/migrate_from_mysql.py
+
+Migra dados do MySQL legado para o PostgreSQL Django.
+
+v2: aceita --source-db para permitir apontar tanto para `salade10_app`
+(snapshot original) quanto para `salade10_app_new` (dump mais recente
+do Hostgator), útil para re-executar a migração completa do zero.
+
+Uso:
+    docker compose exec web python manage.py migrate_from_mysql
+    docker compose exec web python manage.py migrate_from_mysql --source-db=salade10_app_new
+"""
+
 import pymysql
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -6,32 +20,41 @@ from core.models import (
     Format, Author, Title, Issue, CollectionItem, ReadItem, ReadingList
 )
 
-MYSQL_CONFIG = {
-    'host': 'mysql_legacy',
-    'port': 3306,
-    'user': 'legacy_user',
-    'password': 'legacy_pass',
-    'database': 'salade10_app',
-    'charset': 'utf8mb4',
-    'use_unicode': True,
-    'cursorclass': pymysql.cursors.DictCursor,
-}
-
 NOW = timezone.now()
 
 
 class Command(BaseCommand):
     help = 'Migra dados do MySQL legado para o PostgreSQL Django'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--source-db',
+            default='salade10_app',
+            help='Nome da base MySQL de origem (default: salade10_app)',
+        )
+
     def handle(self, *args, **kwargs):
-        conn = pymysql.connect(**MYSQL_CONFIG)
-        
+        mysql_config = {
+            'host': 'mysql_legacy',
+            'port': 3306,
+            'user': 'root',
+            'password': 'legacy_root',
+            'database': kwargs['source_db'],
+            'charset': 'utf8mb4',
+            'use_unicode': True,
+            'cursorclass': pymysql.cursors.DictCursor,
+        }
+
+        self.stdout.write(f"📦 Fonte: {kwargs['source_db']}")
+        conn = pymysql.connect(**mysql_config)
+
         try:
             # Força charset UTF-8 na sessão
             with conn.cursor() as c:
                 c.execute("SET NAMES utf8mb4")
                 c.execute("SET CHARACTER SET utf8mb4")
                 c.execute("SET character_set_connection=utf8mb4")
+                c.execute("SET time_zone = '+00:00'")
 
             self.stdout.write('🔌 Conectado ao MySQL legado')
 
@@ -49,7 +72,6 @@ class Command(BaseCommand):
                 self.migrate_readed(cursor)
                 self.migrate_reading(cursor)
             self.stdout.write(self.style.SUCCESS('✅ Migração concluída com sucesso!'))
-
         finally:
             conn.close()
 
