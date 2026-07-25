@@ -18,4 +18,6 @@ RUN pip install --no-cache-dir \
 
 COPY . .
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+RUN chmod +x /app/start.sh
+
+CMD ["/app/start.sh"]
