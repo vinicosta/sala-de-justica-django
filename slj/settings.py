@@ -13,6 +13,16 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
 
+# Diz ao Django para confiar no header que o proxy do Railway usa
+# pra indicar que a requisição original era HTTPS
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Origens confiáveis para verificação de CSRF em produção
+CSRF_TRUSTED_ORIGINS = [
+    "https://app.saladejustica.com.br",
+    "https://sala-de-justica-django-production.up.railway.app",
+]
+
 LOGIN_URL = "/admin/login/"
 
 INSTALLED_APPS = [
