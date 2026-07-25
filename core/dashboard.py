@@ -147,6 +147,14 @@ def dashboard_callback(request, context):
             data.append(mapa.get(date(hoje.year, m, 1), 0))
         return labels, data
 
+    def periodo_edicoes(inicio, fim, type_id):
+        """Total de edições lidas de um tipo específico num intervalo de datas."""
+        return ReadItem.objects.filter(
+            read_date__gte=inicio,
+            read_date__lte=fim,
+            issue__title__type_id=type_id,
+        ).count()
+
     # ------------------------------------------------------------------ #
     # Páginas (quadrinhos + livros)
     # ------------------------------------------------------------------ #
@@ -171,6 +179,32 @@ def dashboard_callback(request, context):
     # ------------------------------------------------------------------ #
     context["chart_ac_q_labels"], context["chart_ac_q_data"] = edicoes_ano_corrente(TYPE_QUADRINHOS)
     context["chart_ac_l_labels"], context["chart_ac_l_data"] = edicoes_ano_corrente(TYPE_LIVRO)
+
+    # ------------------------------------------------------------------ #
+    # Contadores — mês anterior x mês atual / ano anterior x ano atual
+    # (separado por tipo: Quadrinhos e Livros)
+    # ------------------------------------------------------------------ #
+    inicio_mes_atual = hoje.replace(day=1)
+    fim_mes_atual = hoje
+
+    fim_mes_anterior = inicio_mes_atual - timedelta(days=1)
+    inicio_mes_anterior = fim_mes_anterior.replace(day=1)
+
+    context["edicoes_mes_anterior_q"] = periodo_edicoes(inicio_mes_anterior, fim_mes_anterior, TYPE_QUADRINHOS)
+    context["edicoes_mes_atual_q"]    = periodo_edicoes(inicio_mes_atual, fim_mes_atual, TYPE_QUADRINHOS)
+    context["edicoes_mes_anterior_l"] = periodo_edicoes(inicio_mes_anterior, fim_mes_anterior, TYPE_LIVRO)
+    context["edicoes_mes_atual_l"]    = periodo_edicoes(inicio_mes_atual, fim_mes_atual, TYPE_LIVRO)
+
+    inicio_ano_atual = date(hoje.year, 1, 1)
+    fim_ano_atual = hoje
+
+    inicio_ano_anterior = date(hoje.year - 1, 1, 1)
+    fim_ano_anterior = date(hoje.year - 1, 12, 31)
+
+    context["edicoes_ano_anterior_q"] = periodo_edicoes(inicio_ano_anterior, fim_ano_anterior, TYPE_QUADRINHOS)
+    context["edicoes_ano_atual_q"]    = periodo_edicoes(inicio_ano_atual, fim_ano_atual, TYPE_QUADRINHOS)
+    context["edicoes_ano_anterior_l"] = periodo_edicoes(inicio_ano_anterior, fim_ano_anterior, TYPE_LIVRO)
+    context["edicoes_ano_atual_l"]    = periodo_edicoes(inicio_ano_atual, fim_ano_atual, TYPE_LIVRO)
 
     # ------------------------------------------------------------------ #
     # Tabela — últimas 8 leituras recentes

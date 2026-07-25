@@ -129,6 +129,16 @@
                 data-labels="{{ chart_mc_q_labels|join:',' }}" data-values="{{ chart_mc_q_data|join:',' }}">Quadrinhos
                 lidos no mês.</canvas>
         </div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+            <div style="flex:1;text-align:center;padding:6px 4px;background:var(--un-bg-subtle,rgba(120,120,120,.10));border-radius:8px;">
+                <p style="font-size:10px;color:var(--un-text-muted);margin:0 0 2px;">Mês anterior</p>
+                <p style="font-size:16px;font-weight:600;color:var(--un-text-primary);margin:0;">{{ edicoes_mes_anterior_q }}</p>
+            </div>
+            <div style="flex:1;text-align:center;padding:6px 4px;background:rgba(29,158,117,.14);border-radius:8px;">
+                <p style="font-size:10px;color:#1D9E75;margin:0 0 2px;">Mês atual</p>
+                <p style="font-size:16px;font-weight:600;color:#1D9E75;margin:0;">{{ edicoes_mes_atual_q }}</p>
+            </div>
+        </div>
     </div>
 
     <div
@@ -140,6 +150,16 @@
             <canvas id="cMcL" role="img" aria-label="Livros lidos no mês corrente"
                 data-labels="{{ chart_mc_l_labels|join:',' }}" data-values="{{ chart_mc_l_data|join:',' }}">Livros lidos
                 no mês.</canvas>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+            <div style="flex:1;text-align:center;padding:6px 4px;background:var(--un-bg-subtle,rgba(120,120,120,.10));border-radius:8px;">
+                <p style="font-size:10px;color:var(--un-text-muted);margin:0 0 2px;">Mês anterior</p>
+                <p style="font-size:16px;font-weight:600;color:var(--un-text-primary);margin:0;">{{ edicoes_mes_anterior_l }}</p>
+            </div>
+            <div style="flex:1;text-align:center;padding:6px 4px;background:rgba(55,138,221,.14);border-radius:8px;">
+                <p style="font-size:10px;color:#378ADD;margin:0 0 2px;">Mês atual</p>
+                <p style="font-size:16px;font-weight:600;color:#378ADD;margin:0;">{{ edicoes_mes_atual_l }}</p>
+            </div>
         </div>
     </div>
 
@@ -163,6 +183,16 @@
                 data-labels="{{ chart_ac_q_labels|join:',' }}" data-values="{{ chart_ac_q_data|join:',' }}">Quadrinhos
                 lidos por mês no ano.</canvas>
         </div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+            <div style="flex:1;text-align:center;padding:6px 4px;background:var(--un-bg-subtle,rgba(120,120,120,.10));border-radius:8px;">
+                <p style="font-size:10px;color:var(--un-text-muted);margin:0 0 2px;">Ano anterior</p>
+                <p style="font-size:16px;font-weight:600;color:var(--un-text-primary);margin:0;">{{ edicoes_ano_anterior_q }}</p>
+            </div>
+            <div style="flex:1;text-align:center;padding:6px 4px;background:rgba(29,158,117,.14);border-radius:8px;">
+                <p style="font-size:10px;color:#1D9E75;margin:0 0 2px;">Ano atual</p>
+                <p style="font-size:16px;font-weight:600;color:#1D9E75;margin:0;">{{ edicoes_ano_atual_q }}</p>
+            </div>
+        </div>
     </div>
 
     <div
@@ -174,6 +204,16 @@
             <canvas id="cAcL" role="img" aria-label="Livros lidos no ano corrente"
                 data-labels="{{ chart_ac_l_labels|join:',' }}" data-values="{{ chart_ac_l_data|join:',' }}">Livros lidos
                 por mês no ano.</canvas>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+            <div style="flex:1;text-align:center;padding:6px 4px;background:var(--un-bg-subtle,rgba(120,120,120,.10));border-radius:8px;">
+                <p style="font-size:10px;color:var(--un-text-muted);margin:0 0 2px;">Ano anterior</p>
+                <p style="font-size:16px;font-weight:600;color:var(--un-text-primary);margin:0;">{{ edicoes_ano_anterior_l }}</p>
+            </div>
+            <div style="flex:1;text-align:center;padding:6px 4px;background:rgba(55,138,221,.14);border-radius:8px;">
+                <p style="font-size:10px;color:#378ADD;margin:0 0 2px;">Ano atual</p>
+                <p style="font-size:16px;font-weight:600;color:#378ADD;margin:0;">{{ edicoes_ano_atual_l }}</p>
+            </div>
         </div>
     </div>
 
