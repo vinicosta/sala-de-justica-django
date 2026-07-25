@@ -111,6 +111,7 @@ if USE_R2:
     AWS_S3_FILE_OVERWRITE = False
 
     R2_PUBLIC_DOMAIN = os.environ.get("R2_PUBLIC_DOMAIN")  # ex: pub-xxxx.r2.dev
+    AWS_S3_CUSTOM_DOMAIN = R2_PUBLIC_DOMAIN
     MEDIA_URL = f"https://{R2_PUBLIC_DOMAIN}/"
 
     STORAGES = {
