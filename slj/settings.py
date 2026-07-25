@@ -24,6 +24,7 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 LOGIN_URL = "/admin/login/"
+LOGIN_REDIRECT_URL = "/admin/"
 
 INSTALLED_APPS = [
     # Unfold DEVE vir antes de django.contrib.admin
