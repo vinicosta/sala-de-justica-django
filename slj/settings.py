@@ -12,8 +12,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'change-me-in-production')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 #ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
-CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 
 # Diz ao Django para confiar no header que o proxy do Railway usa
 # pra indicar que a requisição original era HTTPS
