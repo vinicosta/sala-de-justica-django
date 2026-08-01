@@ -10,6 +10,7 @@ from django.core.files.storage import default_storage
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import (
@@ -812,7 +813,7 @@ def toggle_read(request, issue_id: int):
 
     item, created = ReadItem.objects.get_or_create(
         issue=issue, user=user,
-        defaults={"is_reread": False},
+        defaults={"is_reread": False, "read_date": timezone.localdate()},
     )
 
     if not created:
