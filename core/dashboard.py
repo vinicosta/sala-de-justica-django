@@ -215,6 +215,21 @@ def dashboard_callback(request, context):
         .order_by(F("read_date").desc(nulls_last=True), "-id")[:8]
     )
 
+    # Livros: o nome exibido depende de quantas edições o título possui.
+    # Uma única edição → apenas o nome da edição.
+    # Mais de uma      → "nome da edição - nome do título, vol. <número>".
+    titulos_livro = {
+        item.issue.title_id for item in recentes
+        if item.issue.title.type_id == TYPE_LIVRO
+    }
+    edicoes_por_titulo = {
+        r["title_id"]: r["total"]
+        for r in Issue.objects
+        .filter(title_id__in=titulos_livro)
+        .values("title_id")
+        .annotate(total=Count("id"))
+    }
+
     leituras_recentes = []
     for item in recentes:
         issue  = item.issue
@@ -228,9 +243,20 @@ def dashboard_callback(request, context):
         else:
             tipo_label, tipo_color, tipo_bg = "R", "#993C1D", "rgba(216,90,48,0.13)"
 
+        if tipo_id == TYPE_LIVRO:
+            nome = issue.name
+            if edicoes_por_titulo.get(issue.title_id, 1) > 1:
+                nome = f"{nome} - {title.name}"
+                if issue.issue_number:
+                    nome = f"{nome}, vol. {issue.issue_number}"
+            numero = ""
+        else:
+            nome = issue.name
+            numero = issue.issue_number or ""
+
         leituras_recentes.append({
-            "nome":       issue.name,
-            "numero":     issue.issue_number or "",
+            "nome":       nome,
+            "numero":     numero,
             "editora":    title.publisher.name if title.publisher else "—",
             "data":       item.read_date.strftime("%d/%m/%Y") if item.read_date else "—",
             "paginas":    issue.number_pages or 0,
