@@ -59,6 +59,27 @@
     flex: 1;
 }
 
+/* Botão que abre a sidebar mobile (fora do breakpoint xl do Unfold, onde a
+   sidebar fixa já fica visível). Fica escondido nas telas largas porque lá
+   a navegação lateral não precisa de gatilho. */
+.slj-menu-btn {
+    cursor: pointer;
+    font-size: 22px;
+    color: var(--slj-text-muted);
+    flex: none;
+    transition: color var(--slj-transition);
+}
+
+.slj-menu-btn:hover {
+    color: var(--slj-text);
+}
+
+@media (min-width: 1280px) {
+    .slj-menu-btn {
+        display: none;
+    }
+}
+
 /* ── Search ─────────────────────────────────────────────────────────────── */
 .search-form {
     display: flex;
@@ -109,6 +130,72 @@
 
 .search-clear:hover {
     color: var(--slj-text);
+}
+
+/* ── Search expansível (botão + campo que cresce por cima do título) ───────
+   Escopado em .search-slot para não afetar as páginas que ainda usam o
+   campo de busca simples (sempre visível, largura fixa). ─────────────────── */
+.search-slot {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Recolhido, o form fica sobreposto ao botão da lupa (ambos alinhados à
+   direita do slot). Sem pointer-events:none ele rouba o clique do botão
+   justamente em cima do ícone, deixando clicável só a borda esquerda. */
+.search-slot .search-form {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    z-index: 30;
+    width: 0;
+    pointer-events: none;
+    transition: width var(--slj-transition);
+}
+
+/* A largura fica no form, não no input: .search-slot é o bloco contentor e
+   mede só a largura do botão (36px), então o shrink-to-fit prenderia o campo
+   nesses 36px. Com largura explícita o form transborda o slot, como deve. */
+.search-slot .search-form:focus-within,
+.search-slot .search-form.search-open {
+    width: 280px;
+    max-width: calc(100vw - 140px);
+    pointer-events: auto;
+}
+
+.search-slot .search-wrap {
+    width: 100%;
+}
+
+.search-slot .search-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 8px 0;
+    border-color: transparent;
+    opacity: 0;
+    transition: padding var(--slj-transition), opacity var(--slj-transition),
+        border-color var(--slj-transition), box-shadow var(--slj-transition);
+}
+
+.search-slot .search-wrap:focus-within .search-input,
+.search-slot .search-form.search-open .search-input {
+    padding: 8px 36px 8px 36px;
+    border-color: var(--slj-border);
+    opacity: 1;
+    background: var(--slj-bg-card);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+}
+
+.search-slot .search-icon {
+    opacity: 0;
+    transition: opacity var(--slj-transition);
+}
+
+.search-slot .search-wrap:focus-within .search-icon,
+.search-slot .search-form.search-open .search-icon {
+    opacity: 1;
 }
 
 /* ── List meta ──────────────────────────────────────────────────────────── */
