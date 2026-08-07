@@ -760,10 +760,9 @@ def toggle_collection(request, issue_id: int):
     issue = get_object_or_404(Issue, pk=issue_id)
     user  = request.user
 
-    item, created = CollectionItem.objects.get_or_create(
-        issue=issue, user=user,
-        defaults={"has_physical": True, "has_digital": False},
-    )
+    # Sem defaults: físico/digital são marcação manual, via toggle. Marcar
+    # físico aqui deixava o banco divergente do toggle, que nasce apagado.
+    item, created = CollectionItem.objects.get_or_create(issue=issue, user=user)
 
     if not created:
         body = json.loads(request.body or "{}")
